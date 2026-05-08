@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catalogue · BROKE Marrickville</title>
+  <meta name="description" content="The Vitamins issue. Four objects from the BROKE Marrickville studio." />
+  <link rel="stylesheet" href="/assets/brand.css" />
+  <style>
+    body { padding-top: 70px; } /* room for chrome */
+
+    .strip-band { padding-top: var(--strip-h); /* offset under sticky tagline */ }
+
+    .catalogue-head {
+      max-width: var(--maxw); margin: 0 auto;
+      padding: clamp(60px, 12vh, 120px) var(--gutter) clamp(40px, 8vh, 80px);
+      display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 30px;
+    }
+    .catalogue-head .lede {
+      font-family: var(--serif);
+      font-size: clamp(36px, 5.5vw, 72px); line-height: 0.98; font-weight: 400;
+      max-width: 18ch;
+    }
+    .catalogue-head .lede em { font-style: italic; color: var(--pink); font-family: var(--display); font-weight: 300; }
+    .catalogue-head .meta {
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim);
+      text-align: right; line-height: 1.8;
+    }
+    .catalogue-head .meta strong { color: var(--ink); font-weight: 400; }
+
+    .catalogue {
+      display: grid; gap: 0;
+    }
+    .chapter {
+      position: relative;
+      min-height: 92vh;
+      display: grid; grid-template-columns: 1.1fr 1fr;
+      gap: clamp(24px, 5vw, 80px);
+      align-items: center;
+      padding: clamp(60px, 10vh, 120px) var(--gutter);
+      max-width: var(--maxw); margin: 0 auto;
+      border-top: 1px solid var(--hairline);
+    }
+    .chapter:first-child { border-top: 0; }
+
+    /* Visual side */
+    .chapter .visual {
+      position: relative;
+      aspect-ratio: 4 / 5;
+      background: var(--bg-elev);
+      overflow: hidden;
+    }
+    .chapter .visual img {
+      width: 100%; height: 100%; object-fit: cover;
+      filter: grayscale(0.92) contrast(1.08) brightness(0.95);
+      transition: filter .8s, transform 1.2s cubic-bezier(.2,.6,.1,1);
+      transform: scale(1.02);
+    }
+    .chapter[data-in="1"] .visual img {
+      filter: grayscale(0.7) contrast(1.05) brightness(1);
+      transform: scale(1);
+    }
+    .chapter .visual::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(120% 80% at 50% 60%, transparent 50%, rgba(0,0,0,0.55));
+      pointer-events: none; z-index: 2;
+    }
+    /* index numeral overlay */
+    .chapter .visual .num {
+      position: absolute; top: 18px; left: 18px; z-index: 3;
+      font-family: var(--display); font-weight: 300;
+      font-size: 12px; letter-spacing: 0.32em; color: var(--ink);
+      text-transform: uppercase;
+    }
+    .chapter .visual .num em { color: var(--pink); font-style: normal; }
+    .chapter .visual .stock {
+      position: absolute; top: 18px; right: 18px; z-index: 3;
+      font-family: var(--sans); font-size: 10px; letter-spacing: 0.28em;
+      text-transform: uppercase; color: var(--ink-dim);
+    }
+    .chapter .visual .stock::before {
+      content: ""; display: inline-block; width: 6px; height: 6px;
+      background: var(--ink); border-radius: 50%;
+      margin-right: 8px; vertical-align: 1px;
+    }
+    .chapter[data-soldout="1"] .visual .stock::before { background: var(--red); }
+
+    /* Text side */
+    .chapter .text {
+      display: flex; flex-direction: column; gap: 22px;
+      max-width: 40ch;
+    }
+    .chapter .kicker {
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.28em;
+      text-transform: uppercase; color: var(--ink-dim);
+    }
+    .chapter h2 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(32px, 4.4vw, 56px); line-height: 1.0;
+      letter-spacing: -0.005em;
+    }
+    .chapter .price {
+      font-family: var(--display); font-weight: 400;
+      font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase;
+      color: var(--ink);
+    }
+    .chapter .price del { color: var(--ink-dim); margin-right: 10px; }
+    .chapter p {
+      font-family: var(--sans); font-size: 14px; line-height: 1.65;
+      color: var(--ink-dim);
+    }
+    .chapter .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+
+    /* Per-chapter accent rotation */
+    .chapter[data-acc="red"] .visual .num em { color: var(--red); }
+    .chapter[data-acc="red"] .chapter-accent { color: var(--red); }
+    .chapter[data-acc="green"] .visual .num em { color: var(--silver); }
+    .chapter[data-acc="green"] .chapter-accent { color: var(--silver); }
+    .chapter[data-acc="silver"] .visual .num em { color: var(--silver); }
+    .chapter[data-acc="silver"] .chapter-accent { color: var(--silver); }
+    .chapter[data-acc="pink"] .visual .num em { color: var(--pink); }
+    .chapter[data-acc="pink"] .chapter-accent { color: var(--pink); }
+
+    /* Loading skeleton */
+    .skeleton .visual,
+    .skeleton .text > * {
+      background: linear-gradient(90deg, rgba(245,245,245,0.04), rgba(245,245,245,0.08), rgba(245,245,245,0.04));
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+      color: transparent;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .footer-band {
+      padding: clamp(60px, 10vh, 120px) var(--gutter);
+      max-width: var(--maxw); margin: 0 auto;
+      border-top: 1px solid var(--hairline);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: end;
+    }
+    .footer-band h3 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(28px, 3.6vw, 48px); line-height: 1; max-width: 14ch;
+    }
+    .footer-band .meta {
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--ink-dim); line-height: 1.8;
+    }
+
+    @media (max-width: 900px) {
+      .chapter { grid-template-columns: 1fr; min-height: auto; }
+      .catalogue-head { grid-template-columns: 1fr; }
+      .catalogue-head .meta { text-align: left; }
+      .footer-band { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="tagline-strip" aria-label="Issue tagline">
+    <div class="track">
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+    </div>
+  </div>
+
+  <header class="catalogue-head">
+    <h1 class="lede">The Vitamins <em>Issue</em>. Four objects, Marrickville.</h1>
+    <div class="meta">
+      <strong>Catalogue 01</strong><br/>
+      Spring · 2026<br/>
+      Curated by J.H.
+    </div>
+  </header>
+
+  <section class="catalogue" id="catalogue" aria-label="Products"></section>
+
+  <section class="footer-band">
+    <h3>A small studio. Four objects. One bag.</h3>
+    <div class="meta">
+      Free local delivery in Sydney<br/>
+      Worldwide shipping · Marrickville, NSW<br/>
+      Press &amp; wholesale · hello@broke.studio
+    </div>
+  </section>
+
+  <script type="module">
+    import { mountChrome } from "/assets/cart.js";
+    import { getProductsByHandles, formatMoney, PRODUCT_ORDER } from "/assets/shopify.js";
+    import { addAndOpen } from "/assets/cart.js";
+
+    mountChrome({ active: "shop" });
+
+    const ACC = ["red", "green", "silver", "pink"];
+
+    function chapterHTML(p, i) {
+      const num = String(i + 1).padStart(2, "0");
+      const acc = ACC[i % ACC.length];
+      const img = p.images.edges[0]?.node;
+      const price = formatMoney(p.priceRange.minVariantPrice.amount, p.priceRange.minVariantPrice.currencyCode);
+      const sold = !p.availableForSale;
+      const handle = p.handle;
+      const desc = (p.descriptionHtml || "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 220);
+      const blurb = desc || "An object from the Vitamins issue. Cut and finished in Marrickville. Numbered, unhurried, made to wear.";
+
+      return `
+        <article class="chapter" data-acc="${acc}" data-soldout="${sold ? 1 : 0}" data-handle="${handle}">
+          <a class="visual" href="/product/?h=${handle}" aria-label="${p.title}">
+            <span class="num"><em>${num}</em> / 04</span>
+            <span class="stock">${sold ? "Sold out" : "In stock"}</span>
+            ${img ? `<img src="${img.url}" alt="${img.altText || p.title}" loading="lazy">` : ""}
+          </a>
+          <div class="text">
+            <div class="kicker"><span class="chapter-accent">${["Authenticity","Romance","Old World","The Everyday"][i] || "Object"}</span> · Object ${num}</div>
+            <h2>${p.title}</h2>
+            <div class="price">${price}</div>
+            <p>${blurb}</p>
+            <div class="row">
+              <a class="btn" href="/product/?h=${handle}">View Object</a>
+              <button class="btn ghost" data-quick-add="${handle}" ${sold ? "disabled" : ""}>${sold ? "Sold Out" : "Quick Add"}</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function skeletonHTML() {
+      return Array.from({length: 4}).map((_, i) => `
+        <article class="chapter skeleton">
+          <div class="visual"></div>
+          <div class="text">
+            <div class="kicker">&nbsp;</div>
+            <h2>&nbsp;<br/>&nbsp;</h2>
+            <p>&nbsp;<br/>&nbsp;<br/>&nbsp;</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    const root = document.getElementById("catalogue");
+    root.innerHTML = skeletonHTML();
+
+    try {
+      const products = await getProductsByHandles(PRODUCT_ORDER);
+      root.innerHTML = products.map(chapterHTML).join("");
+
+      // IntersectionObserver to trigger crack reveal + image desaturate easing
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.dataset.in = "1";
+            io.unobserve(e.target);
+          }
+        }
+      }, { threshold: 0.35 });
+      root.querySelectorAll(".chapter").forEach((el) => io.observe(el));
+
+      // Quick-add: fetches first available variant for the product and adds to cart
+      root.querySelectorAll("[data-quick-add]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const handle = btn.getAttribute("data-quick-add");
+          const product = products.find((p) => p.handle === handle);
+          const variant = product?.variants.edges
+            .map((e) => e.node)
+            .find((v) => v.availableForSale);
+          if (!variant) return;
+          btn.disabled = true;
+          btn.textContent = "Adding…";
+          try {
+            await addAndOpen(variant.id, 1);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "Quick Add";
+          }
+        });
+      });
+    } catch (err) {
+      console.error(err);
+      root.innerHTML = `
+        <div style="padding:80px var(--gutter); text-align:center; color:var(--ink-dim); font-family:var(--sans); font-size:13px; letter-spacing:0.2em; text-transform:uppercase">
+          Catalogue temporarily unavailable.
+        </div>`;
+    }
+  </script>
+</body>
+</html>

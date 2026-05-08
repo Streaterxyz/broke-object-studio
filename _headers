@@ -1,0 +1,30 @@
+# Cloudflare Pages cache rules
+# Rules are first-match wins, so order matters.
+
+# Fonts: never change once shipped — cache aggressively
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Emblem SVG: rarely changes
+/assets/emblem.svg
+  Cache-Control: public, max-age=2592000
+
+# JS / CSS: cache for an hour, revalidate
+/assets/*.js
+  Cache-Control: public, max-age=3600, must-revalidate
+/assets/*.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# HTML: short cache so deploys land instantly
+/*.html
+  Cache-Control: public, max-age=60, must-revalidate
+/
+  Cache-Control: public, max-age=60, must-revalidate
+
+# Security headers across the whole site
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: interest-cohort=()
+  X-Frame-Options: SAMEORIGIN

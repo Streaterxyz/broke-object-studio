@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Claude local settings (machine-specific)
+.claude/settings.local.json
+
+# Brand source assets (copyright Bedrock Media Group, large files)
+# Note: the directory name has a trailing space, so we use a wildcard match.
+BROKE VISUAL IDENTITY*/
+BROKE VISUAL IDENTITY*
+
+# Future-proofing
+.env
+.env.*
+node_modules/
+dist/
+build/

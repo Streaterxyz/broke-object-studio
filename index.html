@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BROKE — Marrickville · Authenticity in Objects</title>
+  <meta name="description" content="BROKE Marrickville. Romance in craftsmanship. Authenticity in objects. A noir issue from Jordan Hill." />
+  <link rel="stylesheet" href="/assets/brand.css" />
+  <style>
+    html, body { overflow: hidden auto; cursor: none; }
+    body.no-cursor, body.no-cursor * { cursor: none; }
+    body.cursor-on, body.cursor-on * { cursor: auto; }
+
+    /* Hero stage */
+    #stage { position: fixed; inset: 0; z-index: 1; }
+    #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+    /* Hero overlay (corner labels + hint) — scoped to hero */
+    #hero-ui {
+      position: fixed; inset: 0; pointer-events: none; z-index: 12;
+      mix-blend-mode: difference;
+    }
+    .corner {
+      position: absolute; padding: 22px 28px;
+      font-family: var(--sans);
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.85;
+    }
+    .corner.tl { top: 0; left: 0; }
+    .corner.tr { top: 0; right: 0; }
+    .corner.bl { bottom: 0; left: 0; }
+    .corner.br { bottom: 0; right: 0; }
+    #hint {
+      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+      font-family: var(--sans);
+      font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase;
+      opacity: 0.55; transition: opacity .5s ease; z-index: 13;
+      mix-blend-mode: difference;
+    }
+    #hint.hide { opacity: 0; }
+
+    #cursor-label {
+      position: fixed; pointer-events: none; z-index: 50; left: 0; top: 0;
+      font-family: var(--sans);
+      font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
+      opacity: 0; transition: opacity .25s ease;
+      will-change: transform; padding: 4px 8px;
+      mix-blend-mode: difference;
+    }
+    #cursor-label.show { opacity: 0.9; }
+
+    /* Hero scroll-cue → shop. --cue-fade is driven by scroll position; the
+       data-show flag is the initial reveal once the lens is opened. */
+    #scroll-cue {
+      position: fixed; left: 50%; bottom: 0; transform: translateX(-50%);
+      z-index: 14; pointer-events: auto;
+      padding: 18px 24px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      opacity: 0; transition: opacity .6s ease;
+      --cue-fade: 1;
+    }
+    #scroll-cue[data-show="1"] { opacity: calc(0.85 * var(--cue-fade)); }
+    #scroll-cue:hover { opacity: var(--cue-fade); }
+    #scroll-cue .cue-line { width: 1px; height: 28px; background: var(--ink); opacity: 0.5; }
+    #scroll-cue .cue-text {
+      font-family: var(--sans);
+      font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    /* Sections below the hero */
+    .hero-spacer { height: 100vh; position: relative; z-index: 0; }
+
+    .below {
+      position: relative; z-index: 5; background: var(--bg);
+      border-top: 1px solid var(--hairline);
+    }
+    .tagline-strip.sticky {
+      position: sticky; top: 0; z-index: 30;
+      background: var(--bg);
+    }
+
+    .intro-band {
+      padding: clamp(80px, 14vh, 160px) var(--gutter);
+      max-width: var(--maxw); margin: 0 auto;
+      display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(40px, 8vw, 120px);
+      align-items: end;
+    }
+    .intro-band .num {
+      font-family: var(--display); font-size: 12px; letter-spacing: 0.32em;
+      text-transform: uppercase; color: var(--ink-dim); margin-bottom: 18px;
+    }
+    .intro-band h1 {
+      font-family: var(--serif);
+      font-size: clamp(40px, 7vw, 96px);
+      line-height: 0.98; font-weight: 400; letter-spacing: -0.01em;
+    }
+    .intro-band h1 em {
+      font-style: italic; color: var(--pink);
+      font-family: var(--display); font-weight: 300;
+    }
+    .intro-band p {
+      font-family: var(--sans); font-size: 14px; line-height: 1.65;
+      color: var(--ink-dim); max-width: 38ch;
+    }
+    .intro-band .cta-row {
+      margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap;
+    }
+
+    @media (max-width: 800px) {
+      .intro-band { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="no-cursor">
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Hero (existing lens reveal) -->
+  <div id="stage"></div>
+
+  <div id="hero-ui">
+    <div class="corner tl">( BROKE )</div>
+    <div class="corner tr">( 2026 )</div>
+    <div class="corner bl">Click to open</div>
+    <div class="corner br">Emblem · Lens</div>
+  </div>
+  <div id="hint">↳ move + click ↲</div>
+  <div id="cursor-label">( Play Reel )</div>
+
+  <a id="scroll-cue" href="#below" aria-label="Scroll to catalogue">
+    <span class="cue-text">Catalogue ↓</span>
+    <span class="cue-line"></span>
+  </a>
+
+  <!-- spacer so hero canvas occupies first viewport -->
+  <div class="hero-spacer" aria-hidden="true"></div>
+
+  <!-- everything beneath the hero -->
+  <main class="below" id="below">
+    <div class="tagline-strip sticky" aria-label="Issue tagline">
+      <div class="track" aria-hidden="false">
+        <span>Marrickville, Australia</span><span class="dot">·</span>
+        <span>Authenticity in Objects</span><span class="dot">·</span>
+        <span>Romance in Craftsmanship</span><span class="dot">·</span>
+        <span>Marrickville, Australia</span><span class="dot">·</span>
+        <span>Authenticity in Objects</span><span class="dot">·</span>
+        <span>Romance in Craftsmanship</span><span class="dot">·</span>
+        <span>Marrickville, Australia</span><span class="dot">·</span>
+        <span>Authenticity in Objects</span><span class="dot">·</span>
+        <span>Romance in Craftsmanship</span><span class="dot">·</span>
+      </div>
+    </div>
+
+    <section class="intro-band">
+      <div>
+        <div class="num">Issue 01 — 2026</div>
+        <h1>Born from the cracked vase, <em>romance</em> in the everyday.</h1>
+      </div>
+      <div>
+        <p>BROKE is a Marrickville studio practising old-world craftsmanship in modern garments. The catalogue below presents four objects from our debut Vitamins issue — each one a fragment, each one a story.</p>
+        <div class="cta-row">
+          <a class="btn" href="/shop/">Enter the Catalogue</a>
+          <button class="btn ghost" data-open-cart>View Bag</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/assets/cart.js"></script>
+  <script type="module">
+    import { mountChrome } from "/assets/cart.js";
+
+    // Mount chrome only once user has scrolled past the hero, so it
+    // doesn't fight the cursor-less full-screen interaction.
+    let chromeMounted = false;
+    const tryMountChrome = () => {
+      if (chromeMounted) return;
+      if (window.scrollY > window.innerHeight * 0.4) {
+        chromeMounted = true;
+        mountChrome({ active: "home" });
+        document.body.classList.remove("no-cursor");
+        document.body.classList.add("cursor-on");
+        // hide hero corners once we're in chrome mode
+        document.getElementById("hero-ui").style.opacity = "0";
+        document.getElementById("hero-ui").style.transition = "opacity .4s";
+        document.getElementById("cursor-label").classList.remove("show");
+        document.getElementById("cursor-label").style.display = "none";
+      }
+    };
+    window.addEventListener("scroll", tryMountChrome, { passive: true });
+
+    // Reveal the scroll cue once the lens has been opened (or after 4s).
+    const cue = document.getElementById("scroll-cue");
+    const revealCue = () => { cue.dataset.show = "1"; };
+    setTimeout(revealCue, 4000);
+    window.addEventListener("broke:lens-open", revealCue);
+
+    // Fade the cue out as the user scrolls into the catalogue.
+    const fadeCue = () => {
+      const vh = window.innerHeight || 1;
+      // Fully visible at scrollY=0, fully hidden by ~50vh of scroll.
+      const fade = Math.max(0, 1 - (window.scrollY / (vh * 0.5)));
+      cue.style.setProperty("--cue-fade", fade.toFixed(3));
+      if (fade <= 0) cue.style.pointerEvents = "none";
+      else cue.style.pointerEvents = "auto";
+    };
+    window.addEventListener("scroll", fadeCue, { passive: true });
+    fadeCue();
+  </script>
+
+  <script>
+  (() => {
+    // ---------- helpers ----------
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const easeInOutCubic = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+    const easeOutCubic   = t => 1 - Math.pow(1 - t, 3);
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    // ---------- emblem (BROKE vase) loaded from SVG ----------
+    let emblemPath = null;
+    let emblemPaths = []; // per-path entries: { path2d, length, yMid }
+    const EMBLEM_VB = { w: 300, h: 550 };
+
+    async function loadEmblem() {
+      const res = await fetch('/assets/emblem.svg');
+      const text = await res.text();
+
+      // Inject the SVG into the DOM (off-screen, invisible) so we can use
+      // SVGPathElement.getTotalLength() and getBBox() per path.
+      const holder = document.createElement('div');
+      holder.style.cssText = 'position:absolute;left:-99999px;top:0;width:300px;height:550px;visibility:hidden;pointer-events:none;';
+      holder.innerHTML = text;
+      document.body.appendChild(holder);
+
+      const svg = holder.querySelector('svg');
+      const vb = svg && svg.getAttribute('viewBox');
+      if (vb) {
+        const parts = vb.split(/\s+/).map(Number);
+        if (parts.length === 4) { EMBLEM_VB.w = parts[2]; EMBLEM_VB.h = parts[3]; }
+      }
+
+      const liveSvgPaths = svg.querySelectorAll('path');
+      emblemPaths = [];
+      const combined = new Path2D();
+      liveSvgPaths.forEach((p) => {
+        const d = p.getAttribute('d');
+        if (!d) return;
+        const path2d = new Path2D(d);
+        combined.addPath(path2d);
+        let length = 0, yMid = EMBLEM_VB.h / 2;
+        try { length = p.getTotalLength(); } catch {}
+        try {
+          const bb = p.getBBox();
+          yMid = bb.y + bb.height / 2;
+        } catch {}
+        if (length > 0.5) emblemPaths.push({ path2d, length, yMid });
+      });
+      emblemPath = combined;
+      holder.remove();
+    }
+    loadEmblem();
+
+    function emblemMatrix(cx, cy, targetH) {
+      const scale = targetH / EMBLEM_VB.h;
+      return {
+        scale,
+        m: new DOMMatrix()
+          .translateSelf(cx, cy)
+          .scaleSelf(scale, scale)
+          .translateSelf(-EMBLEM_VB.w / 2, -EMBLEM_VB.h / 2),
+      };
+    }
+
+    function getEmblemAt(cx, cy, targetH) {
+      const { m } = emblemMatrix(cx, cy, targetH);
+      const out = new Path2D();
+      out.addPath(emblemPath, m);
+      return out;
+    }
+
+    // ---------- bloom (entrance animation) ----------
+    const BLOOM_MS = 1500;
+    let bloomStart = 0; // set on first render
+    function bloomT(now) {
+      if (!bloomStart) bloomStart = now;
+      return clamp((now - bloomStart) / BLOOM_MS, 0, 1);
+    }
+    // Per-path delay (0 = bottom of viewBox/vase first, ~0.55 = top/flowers last)
+    function pathDelay(yMid) {
+      const yNorm = yMid / EMBLEM_VB.h;     // 0 = top, 1 = bottom
+      return (1 - yNorm) * 0.55;            // bottom blooms first
+    }
+    const PATH_DUR = 0.45; // each path takes 0.45 of the bloom window
+
+    function drawBloom(ctx, cx, cy, targetH, t) {
+      if (!emblemPaths.length) return;
+      const { scale, m } = emblemMatrix(cx, cy, targetH);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 1.0;
+      ctx.shadowColor = 'rgba(255,255,255,0.55)';
+      ctx.shadowBlur = 14;
+      for (const ep of emblemPaths) {
+        const delay = pathDelay(ep.yMid);
+        const local = clamp((t - delay) / PATH_DUR, 0, 1);
+        if (local <= 0) continue;
+        const eased = easeOutCubic(local);
+        const screenLen = ep.length * scale;
+        const drawn = screenLen * eased;
+        ctx.setLineDash([drawn, screenLen + 2]);
+        ctx.lineDashOffset = 0;
+        const tp = new Path2D();
+        tp.addPath(ep.path2d, m);
+        ctx.stroke(tp);
+      }
+      ctx.restore();
+    }
+
+    function fitCover(srcW, srcH, dstW, dstH) {
+      const sR = srcW / srcH, dR = dstW / dstH;
+      let w, h, x, y;
+      if (sR > dR) { h = dstH; w = h * sR; x = (dstW - w) / 2; y = 0; }
+      else         { w = dstW; h = w / sR; x = 0; y = (dstH - h) / 2; }
+      return { x, y, w, h };
+    }
+
+    // ---------- DOM ----------
+    const stage = document.getElementById('stage');
+    const cursorLabel = document.getElementById('cursor-label');
+    const hint = document.getElementById('hint');
+
+    const canvas    = document.createElement('canvas');
+    const offCanvas = document.createElement('canvas');
+    stage.appendChild(canvas);
+    const ctx    = canvas.getContext('2d');
+    const offCtx = offCanvas.getContext('2d');
+
+    const video = document.createElement('video');
+    video.src   = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+    video.muted       = true;
+    video.loop        = true;
+    video.playsInline = true;
+    video.autoplay    = true;
+    video.preload     = 'auto';
+    video.addEventListener('canplay', () => video.play().catch(() => {}));
+
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W = 0, H = 0;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      for (const c of [canvas, offCanvas]) {
+        c.width  = Math.round(W * dpr);
+        c.height = Math.round(H * dpr);
+        c.style.width  = W + 'px';
+        c.style.height = H + 'px';
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const mouse  = { x: W / 2, y: H / 2 };
+    const target = { x: W / 2, y: H / 2 };
+    window.addEventListener('mousemove', e => {
+      target.x = e.clientX;
+      target.y = e.clientY;
+      cursorLabel.style.transform = `translate(${e.clientX + 18}px, ${e.clientY + 18}px)`;
+      cursorLabel.classList.add('show');
+      hint.classList.add('hide');
+    });
+    window.addEventListener('mouseleave', () => cursorLabel.classList.remove('show'));
+
+    let isOpen     = false;
+    let openProg   = 0;
+    let tweenStart = 0, tweenFrom = 0, tweenTo = 0;
+    const OPEN_MS  = 950, CLOSE_MS = 800;
+    let tweenDuration = OPEN_MS, tweenEase = easeOutCubic;
+
+    canvas.addEventListener('click', () => {
+      // Don't accept clicks until the bloom has played; the lens needs the
+      // silhouette to be visible to read as interactive.
+      if (bloomStart && (performance.now() - bloomStart) < BLOOM_MS) return;
+      isOpen = !isOpen;
+      tweenStart = performance.now();
+      tweenFrom  = openProg;
+      tweenTo    = isOpen ? 1 : 0;
+      tweenDuration = isOpen ? OPEN_MS : CLOSE_MS;
+      tweenEase     = isOpen ? easeOutCubic : easeInOutCubic;
+      cursorLabel.textContent = isOpen ? '( Close )' : '( Play Reel )';
+      if (isOpen) {
+        video.muted = false; video.volume = 1;
+        window.dispatchEvent(new CustomEvent('broke:lens-open'));
+      } else {
+        video.muted = true;
+      }
+    });
+
+    const LENS_BASE_H = 460, LENS_GROW = 0.45;
+
+    function render(now) {
+      requestAnimationFrame(render);
+      mouse.x = lerp(mouse.x, target.x, 0.18);
+      mouse.y = lerp(mouse.y, target.y, 0.18);
+
+      if (openProg !== tweenTo) {
+        const t = clamp((now - tweenStart) / tweenDuration, 0, 1);
+        openProg = lerp(tweenFrom, tweenTo, tweenEase(t));
+        if (t >= 1) openProg = tweenTo;
+      }
+
+      // Bloom phase: 0..1 over BLOOM_MS, only ticks when emblem is ready.
+      const bloomReady = emblemPaths.length > 0;
+      const bt = bloomReady ? bloomT(now) : 0;
+      // Visibility of the lens (clip mask + outline). Crossfade in over the
+      // last quarter of bloom so the silhouette settles in by the time the
+      // strokes finish drawing.
+      const lensVis = bloomReady ? clamp((bt - 0.75) / 0.25, 0, 1) : 0;
+      // Strokes hold full visibility through bloom, then fade out as the
+      // lens silhouette takes over.
+      const bloomStrokeAlpha = clamp(1 - lensVis, 0, 1);
+
+      // While blooming, the emblem stays anchored to viewport centre and
+      // ignores the cursor — feels like the brand mark presenting itself
+      // before the user drives the lens.
+      const lensH = lerp(LENS_BASE_H, LENS_BASE_H * (1 + LENS_GROW), openProg);
+      const cx = lerp(lerp(W / 2, mouse.x, lensVis), W / 2, openProg);
+      const cy = lerp(lerp(H / 2, mouse.y, lensVis), H / 2, openProg);
+
+      const vReady = video.readyState >= 2 && video.videoWidth > 0;
+      const ready  = vReady && emblemPath;
+
+      ctx.clearRect(0, 0, W, H);
+      if (vReady) {
+        const bgBlur   = lerp(32, 0, openProg);
+        const bgBright = lerp(0.30, 1, openProg);
+        const bgSat    = lerp(0.55, 1, openProg);
+        ctx.save();
+        ctx.filter = `blur(${bgBlur}px) brightness(${bgBright}) saturate(${bgSat})`;
+        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
+        ctx.drawImage(video, f.x, f.y, f.w, f.h);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Bloom strokes (entrance) — drawn before the lens silhouette so the
+      // silhouette can crossfade over them.
+      if (bloomReady && bloomStrokeAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = bloomStrokeAlpha;
+        drawBloom(ctx, cx, cy, lensH, bt);
+        ctx.restore();
+      }
+
+      if (ready && openProg < 1) {
+        const emblem = getEmblemAt(cx, cy, lensH);
+        offCtx.clearRect(0, 0, W, H);
+        offCtx.save();
+        offCtx.clip(emblem);
+        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
+        offCtx.drawImage(video, f.x, f.y, f.w, f.h);
+        offCtx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = (1 - openProg) * lensVis;
+        ctx.drawImage(offCanvas, 0, 0, W, H);
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = (1 - openProg) * lensVis;
+        ctx.shadowColor = 'rgba(255,255,255,0.6)';
+        ctx.shadowBlur  = 28;
+        ctx.lineWidth   = 1.4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.stroke(emblem);
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+        ctx.stroke(emblem);
+        ctx.restore();
+      }
+
+      ctx.save();
+      const vg = ctx.createRadialGradient(
+        W / 2, H / 2, Math.min(W, H) * 0.4,
+        W / 2, H / 2, Math.max(W, H) * 0.72
+      );
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, `rgba(0,0,0,${0.55 * (1 - openProg)})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(render);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Object · BROKE Marrickville</title>
+  <link rel="stylesheet" href="/assets/brand.css" />
+  <style>
+    body { padding-top: 70px; }
+
+    .pdp {
+      max-width: var(--maxw); margin: 0 auto;
+      padding: clamp(40px, 8vh, 90px) var(--gutter) clamp(80px, 12vh, 160px);
+      display: grid; grid-template-columns: 1.25fr 1fr;
+      gap: clamp(40px, 6vw, 100px);
+      align-items: start;
+    }
+
+    /* breadcrumb */
+    .crumb {
+      grid-column: 1 / -1;
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim);
+      margin-bottom: clamp(20px, 4vh, 40px);
+    }
+    .crumb a:hover { color: var(--ink); }
+    .crumb .sep { margin: 0 10px; opacity: 0.5; }
+
+    /* ----- gallery ----- */
+    .gallery { display: grid; gap: 16px; }
+    .gallery .frame {
+      position: relative; background: var(--bg-elev);
+      aspect-ratio: 4 / 5; overflow: hidden;
+    }
+    .gallery .frame img {
+      width: 100%; height: 100%; object-fit: cover;
+      filter: grayscale(0.85) contrast(1.06);
+    }
+    .gallery .frame.color img { filter: none; }
+    .gallery .num {
+      position: absolute; top: 16px; left: 16px;
+      font-family: var(--display); font-weight: 300;
+      font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--ink); z-index: 2;
+    }
+
+    /* ----- rail (sticky) ----- */
+    .rail {
+      position: sticky; top: 90px;
+      display: flex; flex-direction: column; gap: 24px;
+      max-width: 44ch;
+    }
+    .rail .rail-emblem {
+      position: absolute; top: -40px; right: -20px;
+      width: 180px; opacity: 0.05; pointer-events: none;
+      z-index: -1;
+    }
+    .rail .rail-emblem svg { width: 100%; height: auto; fill: var(--ink); }
+
+    .rail .idx-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim);
+    }
+    .rail .idx-row em { color: var(--pink); font-style: normal; }
+
+    .rail h1 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(36px, 4.6vw, 60px); line-height: 1; letter-spacing: -0.005em;
+    }
+    .rail .sub-loc {
+      font-family: var(--display); font-weight: 300;
+      font-size: 14px; letter-spacing: 0.16em; color: var(--ink-dim);
+    }
+    .rail .desc {
+      font-family: var(--sans); font-size: 14px; line-height: 1.7; color: var(--ink-dim);
+    }
+    .rail .desc p + p { margin-top: 12px; }
+
+    .rail .price-row {
+      display: flex; align-items: baseline; gap: 14px;
+      padding-top: 14px; border-top: 1px solid var(--hairline);
+    }
+    .rail .price {
+      font-family: var(--display); font-weight: 400;
+      font-size: 22px; letter-spacing: 0.16em;
+    }
+    .rail .price small {
+      font-family: var(--sans); font-size: 10px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim); margin-left: 8px;
+    }
+
+    .opt-group { display: flex; flex-direction: column; gap: 10px; }
+    .opt-group .label {
+      display: flex; justify-content: space-between;
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim);
+    }
+    .opt-group .label strong { color: var(--ink); font-weight: 400; }
+    .opt-group .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .add-row { display: flex; flex-direction: column; gap: 10px; }
+    .add-row .add {
+      width: 100%;
+      padding: 22px;
+      font-family: var(--serif); font-size: 16px; letter-spacing: 0.06em;
+      background: var(--ink); color: var(--bg);
+      border: 1px solid var(--ink);
+      position: relative;
+      transition: background .25s, color .25s;
+    }
+    .add-row .add::before {
+      content: ""; position: absolute; top: 9px; right: 9px;
+      width: 6px; height: 6px; background: var(--red); border-radius: 50%;
+    }
+    .add-row .add:hover { background: var(--red); color: var(--ink); border-color: var(--red); }
+    .add-row .add:hover::before { background: var(--ink); }
+    .add-row .add[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+    .add-row .note {
+      font-family: var(--sans); font-size: 10px; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--ink-dim); text-align: center;
+    }
+
+    .care {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px;
+      padding-top: 14px; border-top: 1px solid var(--hairline);
+    }
+    .care div {
+      font-family: var(--sans); font-size: 11px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--ink-dim); line-height: 1.6;
+    }
+    .care div strong { display: block; color: var(--ink); margin-bottom: 4px; font-weight: 400; }
+
+    /* Next-object footer band */
+    .next-band {
+      max-width: var(--maxw); margin: 0 auto;
+      padding: clamp(60px, 10vh, 120px) var(--gutter);
+      border-top: 1px solid var(--hairline);
+      display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 80px);
+      align-items: center;
+    }
+    .next-band .lede {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(28px, 3.6vw, 44px); line-height: 1; max-width: 14ch;
+    }
+    .next-band .next-card {
+      display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center;
+    }
+    .next-band .next-card a.thumb {
+      aspect-ratio: 4/5; background: var(--bg-elev); display: block; overflow: hidden;
+    }
+    .next-band .next-card a.thumb img {
+      width: 100%; height: 100%; object-fit: cover; filter: grayscale(0.85);
+    }
+    .next-band .next-card .body {
+      font-family: var(--sans); font-size: 12px; letter-spacing: 0.18em;
+      color: var(--ink-dim); text-transform: uppercase;
+    }
+    .next-band .next-card .body h3 {
+      font-family: var(--serif); font-size: clamp(20px, 2vw, 28px);
+      letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 400;
+      margin-top: 6px; line-height: 1.05;
+    }
+    .next-band .next-card .body a:hover h3 { color: var(--pink); }
+
+    /* loading */
+    .pdp.loading .gallery .frame, .pdp.loading .rail h1, .pdp.loading .rail .desc {
+      background: linear-gradient(90deg, rgba(245,245,245,0.04), rgba(245,245,245,0.08), rgba(245,245,245,0.04));
+      background-size: 200% 100%; animation: shimmer 1.6s infinite;
+      color: transparent;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+    @media (max-width: 900px) {
+      .pdp { grid-template-columns: 1fr; }
+      .rail { position: static; }
+      .next-band { grid-template-columns: 1fr; }
+      .next-band .next-card { grid-template-columns: 120px 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="tagline-strip" aria-label="Issue tagline">
+    <div class="track">
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+      <span>Marrickville, Australia</span><span class="dot">·</span>
+      <span>Authenticity in Objects</span><span class="dot">·</span>
+      <span>Romance in Craftsmanship</span><span class="dot">·</span>
+    </div>
+  </div>
+
+  <main>
+    <div class="pdp loading" id="pdp">
+      <nav class="crumb">
+        <a href="/">Index</a>
+        <span class="sep">/</span>
+        <a href="/shop/">Catalogue</a>
+        <span class="sep">/</span>
+        <span data-crumb-name>Object</span>
+      </nav>
+      <div class="gallery" data-gallery>
+        <div class="frame"></div>
+      </div>
+      <aside class="rail" data-rail>
+        <div class="rail-emblem" data-rail-emblem></div>
+        <div class="idx-row"><span><em data-rail-idx>00</em> / 04</span><span data-rail-stock>—</span></div>
+        <h1 data-rail-title>Loading…</h1>
+        <div class="sub-loc">Marrickville</div>
+        <div class="desc" data-rail-desc></div>
+
+        <div class="price-row">
+          <span class="price" data-rail-price>—</span>
+          <span><small>AUD · incl. GST</small></span>
+        </div>
+
+        <div data-options></div>
+
+        <div class="add-row">
+          <button class="add" data-add disabled>Add to Bag</button>
+          <span class="note" data-add-note>Select your size</span>
+        </div>
+
+        <div class="care">
+          <div><strong>Made</strong> Cut &amp; finished in Marrickville, NSW</div>
+          <div><strong>Care</strong> Cold wash. Hang dry. Iron inside out.</div>
+          <div><strong>Shipping</strong> Free local. Worldwide flat rate.</div>
+          <div><strong>Returns</strong> Unworn, 14 days. Hello@broke.studio.</div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="next-band" data-next hidden>
+      <div class="lede">Continue the issue.</div>
+      <div class="next-card" data-next-card></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { mountChrome, addAndOpen } from "/assets/cart.js";
+    import { getProduct, getProductsByHandles, formatMoney, PRODUCT_ORDER } from "/assets/shopify.js";
+
+    mountChrome({ active: "shop" });
+
+    const params = new URLSearchParams(location.search);
+    const handle = params.get("h");
+
+    const pdp = document.getElementById("pdp");
+
+    if (!handle) {
+      pdp.innerHTML = `<div style="padding:80px var(--gutter); color:var(--ink-dim)">No object selected. <a style="color:var(--ink); text-decoration:underline" href="/shop/">Return to catalogue.</a></div>`;
+      throw new Error("missing handle");
+    }
+
+    // Background emblem watermark
+    try {
+      const r = await fetch("/assets/emblem.svg");
+      document.querySelector("[data-rail-emblem]").innerHTML = (await r.text()).replace(/<\?xml[^?]*\?>/, "");
+    } catch {}
+
+    let product;
+    try {
+      product = await getProduct(handle);
+    } catch (err) {
+      console.error(err);
+      pdp.innerHTML = `<div style="padding:80px var(--gutter); color:var(--ink-dim)">Object unavailable. <a style="color:var(--ink); text-decoration:underline" href="/shop/">Return to catalogue.</a></div>`;
+      throw err;
+    }
+
+    if (!product) {
+      pdp.innerHTML = `<div style="padding:80px var(--gutter); color:var(--ink-dim)">Object not found. <a style="color:var(--ink); text-decoration:underline" href="/shop/">Return to catalogue.</a></div>`;
+      throw new Error("no product");
+    }
+
+    pdp.classList.remove("loading");
+
+    // Index in PRODUCT_ORDER
+    const idx = PRODUCT_ORDER.indexOf(product.handle);
+    const num = idx >= 0 ? String(idx + 1).padStart(2, "0") : "—";
+    document.querySelector("[data-rail-idx]").textContent = num;
+    document.querySelector("[data-rail-stock]").textContent = product.availableForSale ? "In stock" : "Sold out";
+    document.querySelector("[data-rail-title]").textContent = product.title;
+    document.querySelector("[data-crumb-name]").textContent = product.title;
+    document.title = `${product.title} · BROKE Marrickville`;
+
+    // Description (first 320 chars, paragraphed)
+    const descEl = document.querySelector("[data-rail-desc]");
+    const descText = (product.descriptionHtml || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (descText) {
+      const split = descText.split(/(?<=[.?!])\s+/).slice(0, 4);
+      descEl.innerHTML = split.length > 1
+        ? `<p>${split.slice(0, 2).join(" ")}</p><p>${split.slice(2).join(" ")}</p>`
+        : `<p>${descText}</p>`;
+    } else {
+      descEl.innerHTML = `<p>An object from the Vitamins issue. Cut, sewn and finished in Marrickville. Numbered, unhurried, made to last.</p>`;
+    }
+
+    // Price (initial; updates with variant selection)
+    const priceEl = document.querySelector("[data-rail-price]");
+    const setPrice = (variant) => {
+      const amt = variant?.price?.amount ?? product.priceRange.minVariantPrice.amount;
+      const cur = variant?.price?.currencyCode ?? product.priceRange.minVariantPrice.currencyCode;
+      priceEl.textContent = formatMoney(amt, cur);
+    };
+
+    // Gallery
+    const galleryEl = document.querySelector("[data-gallery]");
+    const imgs = product.images.edges.map((e) => e.node).filter(Boolean);
+    if (imgs.length === 0) {
+      galleryEl.innerHTML = `<div class="frame"></div>`;
+    } else {
+      galleryEl.innerHTML = imgs.slice(0, 6).map((img, i) => `
+        <div class="frame${i === imgs.length - 1 && imgs.length > 1 ? " color" : ""}">
+          <span class="num">${String(i+1).padStart(2,"0")} / ${String(Math.min(imgs.length,6)).padStart(2,"0")}</span>
+          <img src="${img.url}" alt="${img.altText || product.title}" loading="${i === 0 ? "eager" : "lazy"}">
+        </div>
+      `).join("");
+    }
+
+    // Variant selection
+    const variants = product.variants.edges.map((e) => e.node);
+    const opts = product.options.filter(o => !(o.values.length === 1 && o.values[0].toLowerCase() === "default title"));
+    const selected = {}; // option name -> value
+
+    const optsRoot = document.querySelector("[data-options]");
+    optsRoot.innerHTML = opts.map((o) => `
+      <div class="opt-group" data-opt="${o.name}">
+        <div class="label"><span>${o.name}</span><strong data-opt-value>—</strong></div>
+        <div class="chips">
+          ${o.values.map((v) => `<button class="chip" data-val="${v.replace(/"/g, '&quot;')}">${v}</button>`).join("")}
+        </div>
+      </div>
+    `).join("");
+
+    function findVariant() {
+      if (opts.length === 0) return variants[0];
+      return variants.find((v) => v.selectedOptions.every((so) => selected[so.name] === so.value));
+    }
+
+    function updateChipAvailability() {
+      // A chip is enabled if there exists at least one available variant
+      // whose selectedOptions agree with all currently-trialed (defined) values.
+      // Un-trialed options act as wildcards.
+      opts.forEach((o) => {
+        const group = optsRoot.querySelector(`[data-opt="${CSS.escape(o.name)}"]`);
+        if (!group) return;
+        group.querySelectorAll(".chip").forEach((chip) => {
+          const v = chip.dataset.val;
+          const trial = { ...selected, [o.name]: v };
+          const match = variants.find((variant) => {
+            if (!variant.availableForSale) return false;
+            return variant.selectedOptions.every((so) => {
+              const t = trial[so.name];
+              return t === undefined || t === so.value;
+            });
+          });
+          chip.setAttribute("aria-disabled", match ? "false" : "true");
+          chip.setAttribute("aria-pressed", selected[o.name] === v ? "true" : "false");
+        });
+      });
+    }
+
+    function updateAdd() {
+      const v = findVariant();
+      const addBtn = document.querySelector("[data-add]");
+      const note = document.querySelector("[data-add-note]");
+      if (opts.length === 0) {
+        const ok = v && v.availableForSale;
+        addBtn.disabled = !ok;
+        addBtn.textContent = ok ? "Add to Bag" : "Sold Out";
+        note.textContent = ok ? "Free local delivery" : "Notify when restocked";
+        setPrice(v);
+        return;
+      }
+      const allSelected = opts.every((o) => selected[o.name]);
+      if (!allSelected) {
+        addBtn.disabled = true;
+        addBtn.textContent = "Add to Bag";
+        const remaining = opts.filter((o) => !selected[o.name]).map((o) => o.name.toLowerCase()).join(" + ");
+        note.textContent = `Select your ${remaining}`;
+        return;
+      }
+      if (!v) {
+        addBtn.disabled = true;
+        addBtn.textContent = "Unavailable";
+        note.textContent = "Not available in this combination";
+        return;
+      }
+      setPrice(v);
+      const ok = v.availableForSale;
+      addBtn.disabled = !ok;
+      addBtn.textContent = ok ? "Add to Bag" : "Sold Out";
+      note.textContent = ok ? "Free local delivery" : "Notify when restocked";
+    }
+
+    optsRoot.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        if (chip.getAttribute("aria-disabled") === "true") return;
+        const group = chip.closest("[data-opt]");
+        const optName = group.dataset.opt;
+        selected[optName] = chip.dataset.val;
+        group.querySelector("[data-opt-value]").textContent = chip.dataset.val;
+        updateChipAvailability();
+        updateAdd();
+      });
+    });
+
+    // Auto-select if only one option value or all single-value options
+    opts.forEach((o) => {
+      if (o.values.length === 1) {
+        selected[o.name] = o.values[0];
+        const grp = optsRoot.querySelector(`[data-opt="${CSS.escape(o.name)}"]`);
+        if (grp) {
+          grp.querySelector("[data-opt-value]").textContent = o.values[0];
+          grp.querySelector(`.chip[data-val="${CSS.escape(o.values[0])}"]`)?.setAttribute("aria-pressed", "true");
+        }
+      }
+    });
+    updateChipAvailability();
+    updateAdd();
+
+    document.querySelector("[data-add]").addEventListener("click", async () => {
+      const v = findVariant();
+      if (!v || !v.availableForSale) return;
+      const btn = document.querySelector("[data-add]");
+      btn.disabled = true;
+      btn.textContent = "Adding…";
+      try {
+        await addAndOpen(v.id, 1);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Add to Bag";
+      }
+    });
+
+    // Continue-the-issue: load all four, show next
+    try {
+      const all = await getProductsByHandles(PRODUCT_ORDER);
+      const i = PRODUCT_ORDER.indexOf(product.handle);
+      const next = all[(i + 1) % all.length];
+      const nextNum = String(((i + 1) % all.length) + 1).padStart(2, "0");
+      const nextImg = next.images.edges[0]?.node;
+      const card = document.querySelector("[data-next-card]");
+      card.innerHTML = `
+        <a class="thumb" href="/product/?h=${next.handle}">
+          ${nextImg ? `<img src="${nextImg.url}" alt="${nextImg.altText || next.title}">` : ""}
+        </a>
+        <div class="body">
+          <span>Object ${nextNum} / 04</span>
+          <a href="/product/?h=${next.handle}"><h3>${next.title}</h3></a>
+          <span style="color:var(--ink); margin-top:8px; display:inline-block">${formatMoney(next.priceRange.minVariantPrice.amount, next.priceRange.minVariantPrice.currencyCode)} →</span>
+        </div>
+      `;
+      document.querySelector("[data-next]").hidden = false;
+    } catch (e) { console.warn("next-band failed", e); }
+  </script>
+</body>
+</html>
