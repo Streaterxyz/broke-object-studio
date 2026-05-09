@@ -13,7 +13,16 @@
 
     /* Hero stage */
     #stage { position: fixed; inset: 0; z-index: 1; }
-    #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
+    /* Native <video> on the bottom layer; the canvas above punches a hole
+       (via destination-out) that the DOM video shows through. This bypasses
+       iOS WebKit's hardware-decode path which silently ignores ctx.clip()
+       and ctx.globalCompositeOperation='destination-over' for video sources. */
+    #stage .lens-video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 1; pointer-events: none;
+      background: #000;
+    }
 
     /* Hero overlay (corner labels + hint) — scoped to hero */
     #hero-ui {
@@ -331,19 +340,27 @@
     const hint = document.getElementById('hint');
 
     const canvas = document.createElement('canvas');
-    stage.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
 
+    // Native <video> as the bottom layer of the lens. The canvas on top
+    // punches an emblem-shaped hole; the DOM video shows through it.
+    // We use the SAME element to feed canvas drawImage too so canvas
+    // backdrop and DOM video are perfectly frame-synced (one decoder).
     const video = document.createElement('video');
-    // Same-origin so iOS WebKit doesn't taint the canvas and restrict
-    // clip()/composite operations on the resulting bitmap.
+    video.className   = 'lens-video';
     video.src         = '/assets/hero.mp4';
     video.muted       = true;
     video.loop        = true;
     video.playsInline = true;
     video.autoplay    = true;
     video.preload     = 'auto';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
     video.addEventListener('canplay', () => video.play().catch(() => {}));
+
+    // DOM video first (bottom z-index 1), canvas second (top z-index 2).
+    stage.appendChild(video);
+    stage.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
 
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let W = 0, H = 0;
@@ -462,17 +479,11 @@
         const emblem  = getEmblemAt(cx, cy, lensH);
         const maskAlpha = (1 - openProg) * lensVis;
 
-        // iOS-safe masking via globalCompositeOperation. The previous
-        // approach used ctx.clip() + drawImage(video) which iOS WebKit's
-        // hardware-decoded video path can silently ignore. This uses only
-        // fill() and drawImage(video), both of which we know iOS handles
-        // correctly (bloom strokes prove path ops work; the backdrop draw
-        // proves drawImage(video) works).
-        //
-        //   1. destination-out + fill(emblem): erases backdrop pixels
-        //      inside the emblem, leaving a transparent hole.
-        //   2. destination-over + drawImage(video): draws the sharp video
-        //      *behind* existing pixels, filling only the hole.
+        // Punch an emblem-shaped hole in the canvas. The native <video>
+        // element behind the canvas (z-index 1) shows through the hole as
+        // a sharp video. iOS only needs to do fill() + destination-out
+        // here — no clip, no drawImage(video) inside a composite mode,
+        // no offscreen canvas.
         if (maskAlpha > 0.001) {
           ctx.save();
           ctx.filter = 'none';
@@ -480,14 +491,6 @@
           ctx.globalAlpha = maskAlpha;
           ctx.fillStyle = '#000';
           ctx.fill(emblem);
-          ctx.restore();
-
-          ctx.save();
-          ctx.filter = 'none';
-          ctx.globalCompositeOperation = 'destination-over';
-          ctx.globalAlpha = maskAlpha;
-          const f = fitCover(video.videoWidth, video.videoHeight, W, H);
-          ctx.drawImage(video, f.x, f.y, f.w, f.h);
           ctx.restore();
         }
 
