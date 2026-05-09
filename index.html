@@ -469,7 +469,13 @@
         // failed to composite the off-screen canvas back, leaving the
         // clipped sharp video missing while the bloom strokes still drew
         // (the strokes go straight to the main canvas).
+        //
+        // iOS Safari quirk: `ctx.filter` set in a prior save/restore block
+        // can leak into subsequent draws (the WebKit filter state isn't
+        // always cleared on restore). Explicitly reset to 'none' here so
+        // the sharp video isn't silently re-blurred to match the backdrop.
         ctx.save();
+        ctx.filter = 'none';
         ctx.globalAlpha = (1 - openProg) * lensVis;
         ctx.clip(emblem);
         const f = fitCover(video.videoWidth, video.videoHeight, W, H);
