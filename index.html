@@ -395,6 +395,11 @@
         window.dispatchEvent(new CustomEvent('broke:lens-open'));
       } else {
         video.muted = true;
+        // On close, recenter the lens. Without this, openProg→0 causes
+        // cx/cy to lerp toward the click point, so the emblem visibly
+        // slides to wherever the user just tapped.
+        mouse.x = target.x = W / 2;
+        mouse.y = target.y = H / 2;
       }
     });
 
@@ -458,16 +463,17 @@
 
       if (ready && openProg < 1) {
         const emblem = getEmblemAt(cx, cy, lensH);
-        offCtx.clearRect(0, 0, W, H);
-        offCtx.save();
-        offCtx.clip(emblem);
-        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
-        offCtx.drawImage(video, f.x, f.y, f.w, f.h);
-        offCtx.restore();
 
+        // Clip + draw directly onto the main canvas. We previously routed
+        // through an off-screen canvas, but mobile Safari intermittently
+        // failed to composite the off-screen canvas back, leaving the
+        // clipped sharp video missing while the bloom strokes still drew
+        // (the strokes go straight to the main canvas).
         ctx.save();
         ctx.globalAlpha = (1 - openProg) * lensVis;
-        ctx.drawImage(offCanvas, 0, 0, W, H);
+        ctx.clip(emblem);
+        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
+        ctx.drawImage(video, f.x, f.y, f.w, f.h);
         ctx.restore();
 
         ctx.save();
