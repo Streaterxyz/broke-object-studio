@@ -330,15 +330,9 @@
     const cursorLabel = document.getElementById('cursor-label');
     const hint = document.getElementById('hint');
 
-    const canvas    = document.createElement('canvas');
-    const offCanvas = document.createElement('canvas');
+    const canvas = document.createElement('canvas');
     stage.appendChild(canvas);
-    // Park the offscreen buffer in the DOM (hidden) so iOS Safari doesn't
-    // release its backing store under memory pressure between frames.
-    offCanvas.style.cssText = 'position:absolute;left:-99999px;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;';
-    document.body.appendChild(offCanvas);
-    const ctx    = canvas.getContext('2d');
-    const offCtx = offCanvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
 
     const video = document.createElement('video');
     // Same-origin so iOS WebKit doesn't taint the canvas and restrict
@@ -356,14 +350,11 @@
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
-      for (const c of [canvas, offCanvas]) {
-        c.width  = Math.round(W * dpr);
-        c.height = Math.round(H * dpr);
-        c.style.width  = W + 'px';
-        c.style.height = H + 'px';
-      }
+      canvas.width  = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      canvas.style.width  = W + 'px';
+      canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener('resize', resize);
     resize();
@@ -468,28 +459,37 @@
       }
 
       if (ready && openProg < 1) {
-        const emblem = getEmblemAt(cx, cy, lensH);
-        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
+        const emblem  = getEmblemAt(cx, cy, lensH);
+        const maskAlpha = (1 - openProg) * lensVis;
 
-        // Two-stage compositing for iOS compatibility:
-        // 1. Stamp the current video frame onto an in-DOM offscreen canvas.
-        //    This converts the GPU-decoded video into a regular bitmap.
-        //    iOS WebKit's hardware video path can ignore ctx.clip() when
-        //    drawImage(video) is called directly; drawImage(canvas) goes
-        //    through the standard 2D path which respects clipping.
-        // 2. Clip the main canvas to the emblem and drawImage(offCanvas).
-        offCtx.save();
-        offCtx.filter = 'none';
-        offCtx.clearRect(0, 0, W, H);
-        offCtx.drawImage(video, f.x, f.y, f.w, f.h);
-        offCtx.restore();
+        // iOS-safe masking via globalCompositeOperation. The previous
+        // approach used ctx.clip() + drawImage(video) which iOS WebKit's
+        // hardware-decoded video path can silently ignore. This uses only
+        // fill() and drawImage(video), both of which we know iOS handles
+        // correctly (bloom strokes prove path ops work; the backdrop draw
+        // proves drawImage(video) works).
+        //
+        //   1. destination-out + fill(emblem): erases backdrop pixels
+        //      inside the emblem, leaving a transparent hole.
+        //   2. destination-over + drawImage(video): draws the sharp video
+        //      *behind* existing pixels, filling only the hole.
+        if (maskAlpha > 0.001) {
+          ctx.save();
+          ctx.filter = 'none';
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.globalAlpha = maskAlpha;
+          ctx.fillStyle = '#000';
+          ctx.fill(emblem);
+          ctx.restore();
 
-        ctx.save();
-        ctx.filter = 'none';
-        ctx.globalAlpha = (1 - openProg) * lensVis;
-        ctx.clip(emblem);
-        ctx.drawImage(offCanvas, 0, 0, W, H);
-        ctx.restore();
+          ctx.save();
+          ctx.filter = 'none';
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.globalAlpha = maskAlpha;
+          const f = fitCover(video.videoWidth, video.videoHeight, W, H);
+          ctx.drawImage(video, f.x, f.y, f.w, f.h);
+          ctx.restore();
+        }
 
         ctx.save();
         ctx.globalAlpha = (1 - openProg) * lensVis;
