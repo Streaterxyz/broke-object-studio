@@ -333,11 +333,17 @@
     const canvas    = document.createElement('canvas');
     const offCanvas = document.createElement('canvas');
     stage.appendChild(canvas);
+    // Park the offscreen buffer in the DOM (hidden) so iOS Safari doesn't
+    // release its backing store under memory pressure between frames.
+    offCanvas.style.cssText = 'position:absolute;left:-99999px;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;';
+    document.body.appendChild(offCanvas);
     const ctx    = canvas.getContext('2d');
     const offCtx = offCanvas.getContext('2d');
 
     const video = document.createElement('video');
-    video.src   = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+    // Same-origin so iOS WebKit doesn't taint the canvas and restrict
+    // clip()/composite operations on the resulting bitmap.
+    video.src         = '/assets/hero.mp4';
     video.muted       = true;
     video.loop        = true;
     video.playsInline = true;
@@ -463,23 +469,26 @@
 
       if (ready && openProg < 1) {
         const emblem = getEmblemAt(cx, cy, lensH);
+        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
 
-        // Clip + draw directly onto the main canvas. We previously routed
-        // through an off-screen canvas, but mobile Safari intermittently
-        // failed to composite the off-screen canvas back, leaving the
-        // clipped sharp video missing while the bloom strokes still drew
-        // (the strokes go straight to the main canvas).
-        //
-        // iOS Safari quirk: `ctx.filter` set in a prior save/restore block
-        // can leak into subsequent draws (the WebKit filter state isn't
-        // always cleared on restore). Explicitly reset to 'none' here so
-        // the sharp video isn't silently re-blurred to match the backdrop.
+        // Two-stage compositing for iOS compatibility:
+        // 1. Stamp the current video frame onto an in-DOM offscreen canvas.
+        //    This converts the GPU-decoded video into a regular bitmap.
+        //    iOS WebKit's hardware video path can ignore ctx.clip() when
+        //    drawImage(video) is called directly; drawImage(canvas) goes
+        //    through the standard 2D path which respects clipping.
+        // 2. Clip the main canvas to the emblem and drawImage(offCanvas).
+        offCtx.save();
+        offCtx.filter = 'none';
+        offCtx.clearRect(0, 0, W, H);
+        offCtx.drawImage(video, f.x, f.y, f.w, f.h);
+        offCtx.restore();
+
         ctx.save();
         ctx.filter = 'none';
         ctx.globalAlpha = (1 - openProg) * lensVis;
         ctx.clip(emblem);
-        const f = fitCover(video.videoWidth, video.videoHeight, W, H);
-        ctx.drawImage(video, f.x, f.y, f.w, f.h);
+        ctx.drawImage(offCanvas, 0, 0, W, H);
         ctx.restore();
 
         ctx.save();
