@@ -11,17 +11,26 @@
     body.no-cursor, body.no-cursor * { cursor: none; }
     body.cursor-on, body.cursor-on * { cursor: auto; }
 
-    /* Hero stage */
-    #stage { position: fixed; inset: 0; z-index: 1; }
-    #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
-    /* Native <video> on the bottom layer; the canvas above punches a hole
-       (via destination-out) that the DOM video shows through. This bypasses
-       iOS WebKit's hardware-decode path which silently ignores ctx.clip()
-       and ctx.globalCompositeOperation='destination-over' for video sources. */
+    /* Hero stage — three layers from bottom to top:
+       z=1  canvas.bg  : blurred drawImage(video) backdrop
+       z=2  video.lens : same <video> shown natively, shaped by SVG clip-path
+       z=3  canvas.fg  : transparent overlay for bloom + outline strokes
+       The video's mask is done by the browser's native compositor, not the
+       canvas — that's what unblocked iOS WebKit. */
+    #stage { position: fixed; inset: 0; z-index: 1; background: #000; }
+    #stage canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      display: block;
+    }
+    #stage canvas.bg { z-index: 1; }
+    #stage canvas.fg { z-index: 3; pointer-events: none; background: transparent; }
     #stage .lens-video {
       position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; z-index: 1; pointer-events: none;
-      background: #000;
+      object-fit: cover; z-index: 2; pointer-events: none;
+      opacity: 0;
+      clip-path: url(#emblem-clip);
+      -webkit-clip-path: url(#emblem-clip);
+      will-change: opacity;
     }
 
     /* Hero overlay (corner labels + hint) — scoped to hero */
@@ -125,6 +134,16 @@
 
   <!-- Hero (existing lens reveal) -->
   <div id="stage"></div>
+
+  <!-- SVG clip-path consumed by the lens-video layer. Path transform
+       attributes are updated each frame to track lens position/scale.
+       Transforms must live on each <path> directly — Chrome/WebKit
+       ignore transforms on a <g> wrapper inside a <clipPath>. -->
+  <svg width="1" height="1" style="position:absolute;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+    <defs>
+      <clipPath id="emblem-clip" clipPathUnits="userSpaceOnUse"></clipPath>
+    </defs>
+  </svg>
 
   <div id="hero-ui">
     <div class="corner tl">( BROKE )</div>
@@ -250,6 +269,9 @@
       const liveSvgPaths = svg.querySelectorAll('path');
       emblemPaths = [];
       const combined = new Path2D();
+      const clipPathEl = document.getElementById('emblem-clip');
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const clipPathChildren = [];
       liveSvgPaths.forEach((p) => {
         const d = p.getAttribute('d');
         if (!d) return;
@@ -262,10 +284,24 @@
           yMid = bb.y + bb.height / 2;
         } catch {}
         if (length > 0.5) emblemPaths.push({ path2d, length, yMid });
+
+        // Mirror each path into the SVG <clipPath>. We apply the lens
+        // transform per-path because Chrome/WebKit ignore transforms
+        // on a <g> wrapper inside a <clipPath>.
+        if (clipPathEl) {
+          const cpc = document.createElementNS(SVGNS, 'path');
+          cpc.setAttribute('d', d);
+          clipPathEl.appendChild(cpc);
+          clipPathChildren.push(cpc);
+        }
       });
       emblemPath = combined;
+      emblemClipChildren = clipPathChildren;
       holder.remove();
     }
+    // Module-scope ref to the per-path elements inside <clipPath>. Set
+    // by loadEmblem(); read by the render loop.
+    let emblemClipChildren = [];
     loadEmblem();
 
     function emblemMatrix(cx, cy, targetH) {
@@ -339,12 +375,17 @@
     const cursorLabel = document.getElementById('cursor-label');
     const hint = document.getElementById('hint');
 
-    const canvas = document.createElement('canvas');
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.className = 'bg';
+    const fgCanvas = document.createElement('canvas');
+    fgCanvas.className = 'fg';
 
-    // Native <video> as the bottom layer of the lens. The canvas on top
-    // punches an emblem-shaped hole; the DOM video shows through it.
-    // We use the SAME element to feed canvas drawImage too so canvas
-    // backdrop and DOM video are perfectly frame-synced (one decoder).
+    // ONE <video> element. Rendered two ways simultaneously:
+    //   - drawImage(video) into the bg canvas → blurred backdrop.
+    //   - displayed natively over the bg canvas → sharp lens, shaped by an
+    //     SVG clip-path the browser applies in its own compositor.
+    // Single decoder, perfect frame sync, no autoplay-policy issues from
+    // a second hidden video.
     const video = document.createElement('video');
     video.className   = 'lens-video';
     video.src         = '/assets/hero.mp4';
@@ -353,25 +394,36 @@
     video.playsInline = true;
     video.autoplay    = true;
     video.preload     = 'auto';
+    video.setAttribute('muted', '');
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('autoplay', '');
     video.addEventListener('canplay', () => video.play().catch(() => {}));
 
-    // DOM video first (bottom z-index 1), canvas second (top z-index 2).
-    stage.appendChild(video);
-    stage.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
+    stage.appendChild(bgCanvas); // z=1, opaque blurred backdrop
+    stage.appendChild(video);    // z=2, sharp lens via clip-path
+    stage.appendChild(fgCanvas); // z=3, transparent strokes overlay
+    const ctx   = bgCanvas.getContext('2d');
+    const fgCtx = fgCanvas.getContext('2d');
+
+    // The fg canvas needs to receive clicks for the lens-open toggle even
+    // though it's transparent, so leave pointer-events: auto on it. (The
+    // CSS class above sets pointer-events: none — override here.)
+    fgCanvas.style.pointerEvents = 'auto';
 
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let W = 0, H = 0;
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
-      canvas.width  = Math.round(W * dpr);
-      canvas.height = Math.round(H * dpr);
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
+      for (const c of [bgCanvas, fgCanvas]) {
+        c.width  = Math.round(W * dpr);
+        c.height = Math.round(H * dpr);
+        c.style.width  = W + 'px';
+        c.style.height = H + 'px';
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener('resize', resize);
     resize();
@@ -393,7 +445,7 @@
     const OPEN_MS  = 950, CLOSE_MS = 800;
     let tweenDuration = OPEN_MS, tweenEase = easeOutCubic;
 
-    canvas.addEventListener('click', () => {
+    fgCanvas.addEventListener('click', () => {
       // Don't accept clicks until the bloom has played; the lens needs the
       // silhouette to be visible to read as interactive.
       if (bloomStart && (performance.now() - bloomStart) < BLOOM_MS) return;
@@ -451,6 +503,8 @@
       const vReady = video.readyState >= 2 && video.videoWidth > 0;
       const ready  = vReady && emblemPath;
 
+      // Backdrop: blurred drawImage(video) into the canvas. This codepath
+      // is proven to work on iOS (the user always saw the blurred reel).
       ctx.clearRect(0, 0, W, H);
       if (vReady) {
         const bgBlur   = lerp(32, 0, openProg);
@@ -466,46 +520,44 @@
         ctx.fillRect(0, 0, W, H);
       }
 
+      // Lens: same <video> element shown natively on top of the canvas,
+      // shaped by SVG clip-path. Drive opacity + per-path transform here.
+      const lensOpacity = clamp((1 - openProg) * lensVis, 0, 1);
+      video.style.opacity = lensOpacity.toFixed(3);
+      if (emblemClipChildren.length && emblemPath) {
+        const sx = lensH / EMBLEM_VB.h;
+        const tf = `translate(${cx} ${cy}) scale(${sx}) translate(${-EMBLEM_VB.w/2} ${-EMBLEM_VB.h/2})`;
+        for (const cpc of emblemClipChildren) cpc.setAttribute('transform', tf);
+      }
+
+      // Strokes go on the fg canvas (z=3) so they sit on top of the
+      // lens video. Clear it every frame.
+      fgCtx.clearRect(0, 0, W, H);
+
       // Bloom strokes (entrance) — drawn before the lens silhouette so the
       // silhouette can crossfade over them.
       if (bloomReady && bloomStrokeAlpha > 0.001) {
-        ctx.save();
-        ctx.globalAlpha = bloomStrokeAlpha;
-        drawBloom(ctx, cx, cy, lensH, bt);
-        ctx.restore();
+        fgCtx.save();
+        fgCtx.globalAlpha = bloomStrokeAlpha;
+        drawBloom(fgCtx, cx, cy, lensH, bt);
+        fgCtx.restore();
       }
 
+      // Outline strokes on top of the lens (white glow + sharp hairline).
       if (ready && openProg < 1) {
         const emblem  = getEmblemAt(cx, cy, lensH);
-        const maskAlpha = (1 - openProg) * lensVis;
-
-        // Punch an emblem-shaped hole in the canvas. The native <video>
-        // element behind the canvas (z-index 1) shows through the hole as
-        // a sharp video. iOS only needs to do fill() + destination-out
-        // here — no clip, no drawImage(video) inside a composite mode,
-        // no offscreen canvas.
-        if (maskAlpha > 0.001) {
-          ctx.save();
-          ctx.filter = 'none';
-          ctx.globalCompositeOperation = 'destination-out';
-          ctx.globalAlpha = maskAlpha;
-          ctx.fillStyle = '#000';
-          ctx.fill(emblem);
-          ctx.restore();
-        }
-
-        ctx.save();
-        ctx.globalAlpha = (1 - openProg) * lensVis;
-        ctx.shadowColor = 'rgba(255,255,255,0.6)';
-        ctx.shadowBlur  = 28;
-        ctx.lineWidth   = 1.4;
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.stroke(emblem);
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 0.6;
-        ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-        ctx.stroke(emblem);
-        ctx.restore();
+        fgCtx.save();
+        fgCtx.globalAlpha = (1 - openProg) * lensVis;
+        fgCtx.shadowColor = 'rgba(255,255,255,0.6)';
+        fgCtx.shadowBlur  = 28;
+        fgCtx.lineWidth   = 1.4;
+        fgCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+        fgCtx.stroke(emblem);
+        fgCtx.shadowBlur = 0;
+        fgCtx.lineWidth = 0.6;
+        fgCtx.strokeStyle = 'rgba(255,255,255,0.95)';
+        fgCtx.stroke(emblem);
+        fgCtx.restore();
       }
 
       ctx.save();
