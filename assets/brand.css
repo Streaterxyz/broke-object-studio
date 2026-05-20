@@ -67,6 +67,15 @@ a { color: inherit; text-decoration: none; }
 img, svg { display: block; }
 button { font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; }
 
+/* Pointer-cursor on every interactive element across every page.
+   Specificity is intentionally low so the hero's body.no-cursor *
+   rule still wins during the cursor-less hero state. Disabled
+   variants override with not-allowed for clear affordance. */
+a[href], button, [role="button"], [data-open-cart], [data-quick-add] { cursor: pointer; }
+button:disabled, button[disabled],
+[aria-disabled="true"], .btn[disabled],
+a[aria-disabled="true"] { cursor: not-allowed; }
+
 /* ---------- film grain layer ---------- */
 .grain {
   pointer-events: none;
