@@ -10,11 +10,13 @@
 /assets/emblem.svg
   Cache-Control: public, max-age=2592000
 
-# JS / CSS: cache for an hour, revalidate
+# JS / CSS: short cache while the site is in active iteration so
+# pushes propagate in ~1 minute, not 1 hour. Once design settles
+# we can raise these back to 3600+.
 /assets/*.js
-  Cache-Control: public, max-age=3600, must-revalidate
+  Cache-Control: public, max-age=60, must-revalidate
 /assets/*.css
-  Cache-Control: public, max-age=3600, must-revalidate
+  Cache-Control: public, max-age=60, must-revalidate
 
 # HTML: short cache so deploys land instantly
 /*.html
