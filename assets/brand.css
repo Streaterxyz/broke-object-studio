@@ -339,10 +339,13 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 .drawer .checkout:hover { opacity: 0.94; }
 .drawer .checkout:hover::after,
 .drawer .checkout:focus-visible::after { width: 100%; }
+/* Bone text on a bone-filled button is invisible — use a low-opacity
+   dark tone so "SECURE · SHOPIFY" reads as quiet body type against
+   the bg-coloured button text above it. */
 .drawer .checkout small {
   display: block; margin-top: 4px;
   font-family: var(--sans); font-size: 9px; letter-spacing: 0.32em;
-  color: var(--ink-faint); text-transform: uppercase;
+  color: rgba(0,0,0,0.45); text-transform: uppercase;
 }
 
 /* ---------- toast (add-to-bag confirm) ---------- */
