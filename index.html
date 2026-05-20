@@ -152,7 +152,7 @@
     <div class="corner br">Emblem · Lens</div>
   </div>
   <div id="hint">↳ move + click ↲</div>
-  <div id="cursor-label">( Play Reel )</div>
+  <div id="cursor-label">( Archive )</div>
 
   <a id="scroll-cue" href="#below" aria-label="Scroll to catalogue">
     <span class="cue-text">Catalogue ↓</span>
@@ -455,7 +455,7 @@
       tweenTo    = isOpen ? 1 : 0;
       tweenDuration = isOpen ? OPEN_MS : CLOSE_MS;
       tweenEase     = isOpen ? easeOutCubic : easeInOutCubic;
-      cursorLabel.textContent = isOpen ? '( Close )' : '( Play Reel )';
+      cursorLabel.textContent = isOpen ? '( Close )' : '( Archive )';
       if (isOpen) {
         video.muted = false; video.volume = 1;
         window.dispatchEvent(new CustomEvent('broke:lens-open'));
