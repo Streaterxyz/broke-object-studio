@@ -152,10 +152,13 @@
       font-family: var(--display); font-size: 12px; letter-spacing: 0.32em;
       text-transform: uppercase; color: var(--ink-dim); margin-bottom: 18px;
     }
+    /* Statement register — restrained. Was clamp(40px, 7vw, 96px).
+       At desktop max this read as a billboard; the new ceiling lets
+       the line feel like a typeset quote rather than a banner. */
     .intro-band h1 {
       font-family: var(--serif);
-      font-size: clamp(40px, 7vw, 96px);
-      line-height: 0.98; font-weight: 400; letter-spacing: -0.01em;
+      font-size: clamp(32px, 5vw, 64px);
+      line-height: 1.02; font-weight: 400; letter-spacing: -0.01em;
     }
     .intro-band h1 em {
       font-style: italic; color: var(--ink);

@@ -16,10 +16,11 @@
       padding: clamp(60px, 12vh, 120px) var(--gutter) clamp(40px, 8vh, 80px);
       display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 30px;
     }
+    /* Statement register — restrained. Was clamp(36px, 5.5vw, 72px). */
     .catalogue-head .lede {
       font-family: var(--serif);
-      font-size: clamp(36px, 5.5vw, 72px); line-height: 0.98; font-weight: 400;
-      max-width: 18ch;
+      font-size: clamp(28px, 4.4vw, 56px); line-height: 1.02; font-weight: 400;
+      max-width: 20ch;
     }
     .catalogue-head .lede em { font-style: italic; color: var(--ink); font-family: var(--display); font-weight: 300; }
     .catalogue-head .meta {
@@ -97,9 +98,12 @@
       font-family: var(--sans); font-size: 11px; letter-spacing: 0.28em;
       text-transform: uppercase; color: var(--ink-dim);
     }
+    /* Chapter titles are object labels, not page statements. Big drop
+       from clamp(32px, 4.4vw, 56px) — they now sit clearly below the
+       page statement and stop competing across the catalogue. */
     .chapter h2 {
       font-family: var(--serif); font-weight: 400;
-      font-size: clamp(32px, 4.4vw, 56px); line-height: 1.0;
+      font-size: clamp(20px, 2.4vw, 28px); line-height: 1.1;
       letter-spacing: -0.005em;
     }
     .chapter .price {
@@ -138,9 +142,11 @@
       border-top: 1px solid var(--hairline);
       display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: end;
     }
+    /* Footer heading drops to the same range as chapter titles — the
+       footer shouldn't compete with the page statement at the top. */
     .footer-band h3 {
       font-family: var(--serif); font-weight: 400;
-      font-size: clamp(28px, 3.6vw, 48px); line-height: 1; max-width: 14ch;
+      font-size: clamp(22px, 2.6vw, 30px); line-height: 1.1; max-width: 16ch;
     }
     .footer-band .meta {
       font-family: var(--sans); font-size: 11px; letter-spacing: 0.22em;
