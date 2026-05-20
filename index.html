@@ -49,8 +49,22 @@
       opacity: 0.9;
     }
     .film-grain svg { width: 100%; height: 100%; display: block; }
+    /* Pass 2 — extra grain inside the lens. Same noise source, but
+       clipped to the emblem shape via the shared #emblem-clip. Stacks
+       on top of the base grain → noticeably more texture inside the
+       masked area, like a film print versus an HD frame.
+       overlay blend here because we want the inner pass to push
+       contrast rather than just modulate brightness. */
+    .film-grain.film-grain--lens {
+      z-index: 5;
+      mix-blend-mode: overlay;
+      opacity: 0.75;
+      clip-path: url(#emblem-clip);
+      -webkit-clip-path: url(#emblem-clip);
+    }
     @media (prefers-reduced-motion: reduce) {
       .film-grain { opacity: 0.55; }
+      .film-grain.film-grain--lens { opacity: 0.45; }
     }
 
     /* Hero overlay (corner labels + hint) — scoped to hero */
@@ -187,6 +201,25 @@
     </svg>
   </div>
 
+  <!-- Pass 2: extra grain inside the lens, clipped to the same emblem
+       shape the lens video uses. Separate noise generator at a tighter
+       frequency so the masked area reads as a denser film print. -->
+  <div class="film-grain film-grain--lens" aria-hidden="true">
+    <svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="film-grain-lens-filter" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence id="film-grain-lens-turb" type="fractalNoise" baseFrequency="2.4" numOctaves="2" stitchTiles="stitch" seed="11" />
+          <feColorMatrix type="matrix" values="
+            1 0 0 0 0
+            0 1 0 0 0
+            0 0 1 0 0
+            0 0 0 1 0" />
+        </filter>
+      </defs>
+      <rect width="800" height="800" filter="url(#film-grain-lens-filter)" />
+    </svg>
+  </div>
+
   <div id="hero-ui">
     <div class="corner tl">( BROKE )</div>
     <div class="corner tr">( 2026 )</div>
@@ -282,11 +315,19 @@
     // Driven by setInterval, not rAF, so it keeps a steady cadence and
     // doesn't get coupled to the lens render loop.
     const turb = document.getElementById("film-grain-turb");
+    const turbLens = document.getElementById("film-grain-lens-turb");
     if (turb && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const seeds = [2, 9, 4, 7, 3, 8, 5, 1, 6, 10];
+      // Offset sequence for the inner-lens grain so the two layers
+      // don't correlate (which would just double-density the same
+      // noise pattern; we want decorrelated grain to feel like distinct
+      // film passes).
+      const seedsLens = [11, 17, 13, 19, 14, 12, 18, 15, 16, 20];
       let i = 0;
       setInterval(() => {
-        turb.setAttribute("seed", String(seeds[i++ % seeds.length]));
+        const k = i++ % seeds.length;
+        turb.setAttribute("seed", String(seeds[k]));
+        if (turbLens) turbLens.setAttribute("seed", String(seedsLens[k]));
       }, 80);
     }
   </script>
@@ -560,13 +601,19 @@
 
       // Backdrop: blurred drawImage(video) into the canvas. This codepath
       // is proven to work on iOS (the user always saw the blurred reel).
+      // Pass 2 adds a film-stock colour grade (contrast + warm sepia) that
+      // relaxes as the lens opens, so the reveal lands at true colour.
       ctx.clearRect(0, 0, W, H);
       if (vReady) {
-        const bgBlur   = lerp(32, 0, openProg);
-        const bgBright = lerp(0.30, 1, openProg);
-        const bgSat    = lerp(0.55, 1, openProg);
+        const bgBlur     = lerp(32, 0, openProg);
+        const bgBright   = lerp(0.30, 1, openProg);
+        const bgSat      = lerp(0.55, 1, openProg);
+        const bgContrast = lerp(1.10, 1, openProg);
+        const bgSepia    = lerp(0.08, 0, openProg);
         ctx.save();
-        ctx.filter = `blur(${bgBlur}px) brightness(${bgBright}) saturate(${bgSat})`;
+        ctx.filter =
+          `blur(${bgBlur}px) brightness(${bgBright}) saturate(${bgSat}) ` +
+          `contrast(${bgContrast.toFixed(3)}) sepia(${bgSepia.toFixed(3)})`;
         const f = fitCover(video.videoWidth, video.videoHeight, W, H);
         ctx.drawImage(video, f.x, f.y, f.w, f.h);
         ctx.restore();
@@ -624,13 +671,18 @@
         fgCtx.restore();
       }
 
+      // Pass 2 vignette: slight off-centre origin so it feels lens-cast
+      // rather than CSS-radial; a warm-tinted mid-stop (instead of pure
+      // black) gives it a film-stock feel; deeper corners.
       ctx.save();
       const vg = ctx.createRadialGradient(
-        W / 2, H / 2, Math.min(W, H) * 0.4,
-        W / 2, H / 2, Math.max(W, H) * 0.72
+        W * 0.48, H * 0.46, Math.min(W, H) * 0.22,
+        W / 2,    H / 2,    Math.max(W, H) * 0.80
       );
-      vg.addColorStop(0, 'rgba(0,0,0,0)');
-      vg.addColorStop(1, `rgba(0,0,0,${0.55 * (1 - openProg)})`);
+      const va = 1 - openProg;
+      vg.addColorStop(0,    'rgba(0,0,0,0)');
+      vg.addColorStop(0.55, `rgba(10,5,2,${(0.22 * va).toFixed(3)})`);
+      vg.addColorStop(1,    `rgba(0,0,0,${(0.72 * va).toFixed(3)})`);
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
