@@ -21,7 +21,7 @@
       font-size: clamp(36px, 5.5vw, 72px); line-height: 0.98; font-weight: 400;
       max-width: 18ch;
     }
-    .catalogue-head .lede em { font-style: italic; color: var(--pink); font-family: var(--display); font-weight: 300; }
+    .catalogue-head .lede em { font-style: italic; color: var(--ink); font-family: var(--display); font-weight: 300; }
     .catalogue-head .meta {
       font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
       text-transform: uppercase; color: var(--ink-dim);
@@ -73,7 +73,7 @@
       font-size: 12px; letter-spacing: 0.32em; color: var(--ink);
       text-transform: uppercase;
     }
-    .chapter .visual .num em { color: var(--pink); font-style: normal; }
+    .chapter .visual .num em { color: var(--ink); font-style: normal; }
     .chapter .visual .stock {
       position: absolute; top: 18px; right: 18px; z-index: 3;
       font-family: var(--sans); font-size: 10px; letter-spacing: 0.28em;
@@ -84,7 +84,9 @@
       background: var(--ink); border-radius: 50%;
       margin-right: 8px; vertical-align: 1px;
     }
-    .chapter[data-soldout="1"] .visual .stock::before { background: var(--red); }
+    /* Sold-out: no colour signal. The label change carries the meaning;
+       a coloured dot would just reintroduce the brand-system feel. */
+    .chapter[data-soldout="1"] .visual .stock::before { background: var(--ink-faint); }
 
     /* Text side */
     .chapter .text {
@@ -112,15 +114,10 @@
     }
     .chapter .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
 
-    /* Per-chapter accent rotation */
-    .chapter[data-acc="red"] .visual .num em { color: var(--red); }
-    .chapter[data-acc="red"] .chapter-accent { color: var(--red); }
-    .chapter[data-acc="green"] .visual .num em { color: var(--silver); }
-    .chapter[data-acc="green"] .chapter-accent { color: var(--silver); }
-    .chapter[data-acc="silver"] .visual .num em { color: var(--silver); }
-    .chapter[data-acc="silver"] .chapter-accent { color: var(--silver); }
-    .chapter[data-acc="pink"] .visual .num em { color: var(--pink); }
-    .chapter[data-acc="pink"] .chapter-accent { color: var(--pink); }
+    /* Per-chapter accent rotation killed in the colour-simplification
+       pass. All four chapters live in the same monochrome system;
+       differentiation comes from imagery and the index number, not
+       hue. */
 
     /* Loading skeleton */
     .skeleton .visual,
@@ -202,11 +199,8 @@
 
     mountChrome({ active: "shop" });
 
-    const ACC = ["red", "green", "silver", "pink"];
-
     function chapterHTML(p, i) {
       const num = String(i + 1).padStart(2, "0");
-      const acc = ACC[i % ACC.length];
       const img = p.images.edges[0]?.node;
       const price = formatMoney(p.priceRange.minVariantPrice.amount, p.priceRange.minVariantPrice.currencyCode);
       const sold = !p.availableForSale;
@@ -219,7 +213,7 @@
       const blurb = desc || "An object from the Vitamins issue. Cut and finished in Marrickville. Numbered, unhurried, made to wear.";
 
       return `
-        <article class="chapter" data-acc="${acc}" data-soldout="${sold ? 1 : 0}" data-handle="${handle}">
+        <article class="chapter" data-soldout="${sold ? 1 : 0}" data-handle="${handle}">
           <a class="visual" href="/product/?h=${handle}" aria-label="${p.title}">
             <span class="num"><em>${num}</em> / 04</span>
             <span class="stock">${sold ? "Sold out" : "In stock"}</span>

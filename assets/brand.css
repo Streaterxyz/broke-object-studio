@@ -78,13 +78,16 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   background-size: 220px 220px;
 }
 
-/* ---------- tagline strip (signature device) ---------- */
+/* ---------- tagline strip (signature device) ----------
+   Was: brand pink throughout. New system: bone for the text. Pink
+   only on the punctuation dot, at low opacity — it ticks past as a
+   barely-there pulse instead of a chromatic banner. */
 .tagline-strip {
   position: relative;
   height: var(--strip-h);
   font-family: var(--sans);
   font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--pink);
+  color: var(--ink-dim);
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
   overflow: hidden;
@@ -100,7 +103,7 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   will-change: transform;
 }
 .tagline-strip .track span { opacity: 0.9; }
-.tagline-strip .track .dot { color: var(--pink); opacity: 0.5; }
+.tagline-strip .track .dot { color: var(--pink); opacity: 0.35; }
 @keyframes tagline-scroll {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -138,15 +141,21 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 .chrome .nav .bag {
   position: relative; display: inline-flex; align-items: center; gap: 8px;
 }
+/* Bag count badge: was brand red. Per "pink as trace", this is one of
+   the canonical state-driven pulse locations — the cart has items, so
+   pink earns its appearance. */
 .chrome .nav .bag .count {
   display: inline-grid; place-items: center;
   min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 999px; font-size: 10px; letter-spacing: 0.04em;
-  background: var(--red); color: var(--ink);
+  background: var(--pink); color: var(--bg);
 }
 .chrome .nav .bag .count[data-empty="1"] { display: none; }
 
-/* ---------- buttons / pills ---------- */
+/* ---------- buttons / pills ----------
+   Was: brand red on hover. Now monochrome — the affordance is a
+   1px pink hairline that grows from the centre on hover/focus.
+   Pink as trace under interaction, never as a fill colour. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 10px;
@@ -155,12 +164,22 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   letter-spacing: 0.28em; text-transform: uppercase;
   border: 1px solid var(--ink);
   background: var(--ink); color: var(--bg);
-  transition: background .25s, color .25s, border-color .25s;
+  position: relative;
+  transition: opacity .25s, background .25s, color .25s, border-color .25s;
 }
-.btn:hover { background: var(--red); border-color: var(--red); color: var(--ink); }
+.btn::after {
+  content: ""; position: absolute; left: 50%; bottom: -1px;
+  width: 0; height: 1px; background: var(--pink);
+  transform: translateX(-50%);
+  transition: width .35s ease;
+  pointer-events: none;
+}
+.btn:hover { opacity: 0.92; }
+.btn:hover::after, .btn:focus-visible::after { width: 100%; }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn[disabled]:hover::after { width: 0; }
 .btn.ghost { background: transparent; color: var(--ink); }
-.btn.ghost:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.ghost:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); opacity: 1; }
 
 .chip {
   display: inline-flex; align-items: center; justify-content: center;
@@ -193,15 +212,19 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 }
 .drawer-backdrop[data-open="1"] { opacity: 1; pointer-events: auto; }
 
+/* Drawer panel: was deep brand green with a 2px brand-red spine. The
+   chromatic chassis was the most "brand system" thing on the site. Now
+   it's a near-black panel with a bone hairline edge — the bag is just
+   another editorial page. */
 .drawer {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 210;
   width: min(440px, 100vw);
-  background: var(--green);
+  background: var(--bg-elev);
   color: var(--ink);
   display: flex; flex-direction: column;
   transform: translateX(100%);
   transition: transform .42s cubic-bezier(.2,.7,.1,1);
-  border-left: 2px solid var(--red);
+  border-left: 1px solid var(--hairline);
   box-shadow: -40px 0 80px rgba(0,0,0,0.5);
 }
 .drawer[data-open="1"] { transform: translateX(0); }
@@ -297,12 +320,25 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   font-family: var(--serif); font-size: 18px; letter-spacing: 0.06em;
   text-align: center;
   position: relative;
+  transition: opacity .25s ease;
 }
+/* Pink dot in the top-right corner — the canonical "pulse" pink moment.
+   Was brand red. Pairs with the bag-count badge as the two pink state
+   indicators in the bag flow. */
 .drawer .checkout::before {
   content: ""; position: absolute; top: 8px; right: 8px;
-  width: 6px; height: 6px; background: var(--red); border-radius: 50%;
+  width: 6px; height: 6px; background: var(--pink); border-radius: 50%;
 }
-.drawer .checkout:hover { background: var(--red); color: var(--ink); }
+/* Hover keeps the bone fill; a pink hairline grows under the button. */
+.drawer .checkout::after {
+  content: ""; position: absolute; left: 50%; bottom: 0;
+  width: 0; height: 1px; background: var(--pink);
+  transform: translateX(-50%);
+  transition: width .35s ease;
+}
+.drawer .checkout:hover { opacity: 0.94; }
+.drawer .checkout:hover::after,
+.drawer .checkout:focus-visible::after { width: 100%; }
 .drawer .checkout small {
   display: block; margin-top: 4px;
   font-family: var(--sans); font-size: 9px; letter-spacing: 0.32em;

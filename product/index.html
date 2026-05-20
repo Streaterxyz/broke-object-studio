@@ -62,7 +62,7 @@
       font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em;
       text-transform: uppercase; color: var(--ink-dim);
     }
-    .rail .idx-row em { color: var(--pink); font-style: normal; }
+    .rail .idx-row em { color: var(--ink); font-style: normal; }
 
     .rail h1 {
       font-family: var(--serif); font-weight: 400;
@@ -107,15 +107,26 @@
       background: var(--ink); color: var(--bg);
       border: 1px solid var(--ink);
       position: relative;
-      transition: background .25s, color .25s;
+      transition: opacity .25s ease;
     }
+    /* Pink pulse dot — was red. State indicator: this object is
+       available, the action is live. */
     .add-row .add::before {
       content: ""; position: absolute; top: 9px; right: 9px;
-      width: 6px; height: 6px; background: var(--red); border-radius: 50%;
+      width: 6px; height: 6px; background: var(--pink); border-radius: 50%;
     }
-    .add-row .add:hover { background: var(--red); color: var(--ink); border-color: var(--red); }
-    .add-row .add:hover::before { background: var(--ink); }
+    /* Pink hairline grows from centre on hover, matching .btn. */
+    .add-row .add::after {
+      content: ""; position: absolute; left: 50%; bottom: -1px;
+      width: 0; height: 1px; background: var(--pink);
+      transform: translateX(-50%);
+      transition: width .35s ease;
+    }
+    .add-row .add:hover { opacity: 0.94; }
+    .add-row .add:hover::after,
+    .add-row .add:focus-visible::after { width: 100%; }
     .add-row .add[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .add-row .add[disabled]:hover::after { width: 0; }
 
     .add-row .note {
       font-family: var(--sans); font-size: 10px; letter-spacing: 0.24em;
