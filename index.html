@@ -9,7 +9,13 @@
   <style>
     html, body { overflow: hidden auto; cursor: none; }
     body.no-cursor, body.no-cursor * { cursor: none; }
-    body.cursor-on, body.cursor-on * { cursor: auto; }
+    /* When chrome mounts: restore default cursor on the body and let
+       browser defaults take over for interactive elements (anchors and
+       buttons get cursor:pointer automatically). The previous rule
+       forced cursor:auto on every descendant, which overrode the
+       pointer cursor on nav items. */
+    body.cursor-on { cursor: default; }
+    body.cursor-on a, body.cursor-on button { cursor: pointer; }
 
     /* Hero stage — three layers from bottom to top:
        z=1  canvas.bg  : blurred drawImage(video) backdrop

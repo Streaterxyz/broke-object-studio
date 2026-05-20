@@ -70,11 +70,24 @@ export async function mountChrome({ active = "" } = {}) {
   `;
   document.head.appendChild(style);
 
-  document.querySelector("[data-open-cart]")?.addEventListener("click", openDrawer);
-
   // Now that the chrome (with [data-bag-count]) exists, sync from current cart.
   syncBagCount();
 }
+
+// Delegate [data-open-cart] clicks at the document level so ANY button
+// with that attribute opens the drawer — the chrome BAG button, the
+// intro-band "View Bag" CTA, anything added later. The previous code
+// used document.querySelector("[data-open-cart]") at mountChrome time,
+// which only attached to the FIRST matching element in document order
+// and silently broke clicks on every other one. Document-level
+// delegation is idempotent (only attached once on module load) and
+// future-proof. */
+document.addEventListener("click", (ev) => {
+  const trigger = ev.target.closest?.("[data-open-cart]");
+  if (!trigger) return;
+  ev.preventDefault();
+  openDrawer();
+});
 
 // Kick off the cart fetch immediately on module load so the count is
 // available the moment the chrome (or anything else) needs it.
