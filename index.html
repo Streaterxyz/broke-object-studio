@@ -39,17 +39,18 @@
 
     /* Pass 1 — film grain overlay. SVG feTurbulence rasterised by the
        browser; the seed attribute is rotated in JS at ~12fps for that
-       celluloid projection cadence. Mix-blend-mode: overlay turns the
-       neutral noise into luminance modulation, not white speckle. */
+       celluloid projection cadence. soft-light keeps shadows dark while
+       still letting the grain modulate midtones (overlay was crushing
+       too much detail on the dark backdrop). */
     .film-grain {
       position: fixed; inset: 0; z-index: 4;
       pointer-events: none;
-      mix-blend-mode: overlay;
-      opacity: 0.45;
+      mix-blend-mode: soft-light;
+      opacity: 0.9;
     }
     .film-grain svg { width: 100%; height: 100%; display: block; }
     @media (prefers-reduced-motion: reduce) {
-      .film-grain { opacity: 0.28; }
+      .film-grain { opacity: 0.55; }
     }
 
     /* Hero overlay (corner labels + hint) — scoped to hero */
@@ -166,20 +167,23 @@
 
   <!-- Film grain overlay. The feTurbulence renders procedural noise; the
        seed attribute is rotated in JS so the grain "lives" without
-       relying on SMIL (which is unreliable on iOS Safari). -->
+       relying on SMIL (which is unreliable on iOS Safari).
+       Explicit viewBox keeps the noise grain visually consistent across
+       desktop and mobile — without it, the noise stretches with the
+       viewport and becomes blurry at large widths. -->
   <div class="film-grain" aria-hidden="true">
-    <svg preserveAspectRatio="none">
+    <svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice">
       <defs>
         <filter id="film-grain-filter" x="0%" y="0%" width="100%" height="100%">
-          <feTurbulence id="film-grain-turb" type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" seed="2" />
+          <feTurbulence id="film-grain-turb" type="fractalNoise" baseFrequency="1.6" numOctaves="2" stitchTiles="stitch" seed="2" />
           <feColorMatrix type="matrix" values="
             1 0 0 0 0
             0 1 0 0 0
             0 0 1 0 0
-            0 0 0 0.55 0" />
+            0 0 0 0.9 0" />
         </filter>
       </defs>
-      <rect width="100%" height="100%" filter="url(#film-grain-filter)" />
+      <rect width="800" height="800" filter="url(#film-grain-filter)" />
     </svg>
   </div>
 
