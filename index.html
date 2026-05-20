@@ -30,7 +30,26 @@
       opacity: 0;
       clip-path: url(#emblem-clip);
       -webkit-clip-path: url(#emblem-clip);
+      /* Tiny edge bleed so the mask reads as a physical stencil rather
+         than a math-perfect CSS clip. */
+      filter: blur(0.6px);
+      -webkit-filter: blur(0.6px);
       will-change: opacity;
+    }
+
+    /* Pass 1 — film grain overlay. SVG feTurbulence rasterised by the
+       browser; the seed attribute is rotated in JS at ~12fps for that
+       celluloid projection cadence. Mix-blend-mode: overlay turns the
+       neutral noise into luminance modulation, not white speckle. */
+    .film-grain {
+      position: fixed; inset: 0; z-index: 4;
+      pointer-events: none;
+      mix-blend-mode: overlay;
+      opacity: 0.45;
+    }
+    .film-grain svg { width: 100%; height: 100%; display: block; }
+    @media (prefers-reduced-motion: reduce) {
+      .film-grain { opacity: 0.28; }
     }
 
     /* Hero overlay (corner labels + hint) — scoped to hero */
@@ -145,6 +164,25 @@
     </defs>
   </svg>
 
+  <!-- Film grain overlay. The feTurbulence renders procedural noise; the
+       seed attribute is rotated in JS so the grain "lives" without
+       relying on SMIL (which is unreliable on iOS Safari). -->
+  <div class="film-grain" aria-hidden="true">
+    <svg preserveAspectRatio="none">
+      <defs>
+        <filter id="film-grain-filter" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence id="film-grain-turb" type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" seed="2" />
+          <feColorMatrix type="matrix" values="
+            1 0 0 0 0
+            0 1 0 0 0
+            0 0 1 0 0
+            0 0 0 0.55 0" />
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" filter="url(#film-grain-filter)" />
+    </svg>
+  </div>
+
   <div id="hero-ui">
     <div class="corner tl">( BROKE )</div>
     <div class="corner tr">( 2026 )</div>
@@ -233,6 +271,20 @@
     };
     window.addEventListener("scroll", fadeCue, { passive: true });
     fadeCue();
+
+    // ---- Film grain animator ----
+    // Rotate the feTurbulence seed at ~12fps. 12fps is the projection
+    // cadence the eye reads as "film" rather than "digital noise".
+    // Driven by setInterval, not rAF, so it keeps a steady cadence and
+    // doesn't get coupled to the lens render loop.
+    const turb = document.getElementById("film-grain-turb");
+    if (turb && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const seeds = [2, 9, 4, 7, 3, 8, 5, 1, 6, 10];
+      let i = 0;
+      setInterval(() => {
+        turb.setAttribute("seed", String(seeds[i++ % seeds.length]));
+      }, 80);
+    }
   </script>
 
   <script>
@@ -342,10 +394,9 @@
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-      ctx.lineWidth = 1.0;
-      ctx.shadowColor = 'rgba(255,255,255,0.55)';
-      ctx.shadowBlur = 14;
+      // Bone white, no glow halo — reads as ink on paper, not LED.
+      ctx.strokeStyle = 'rgba(232,230,224,0.92)';
+      ctx.lineWidth = 0.8;
       for (const ep of emblemPaths) {
         const delay = pathDelay(ep.yMid);
         const local = clamp((t - delay) / PATH_DUR, 0, 1);
@@ -543,19 +594,28 @@
         fgCtx.restore();
       }
 
-      // Outline strokes on top of the lens (white glow + sharp hairline).
+      // Outline strokes: two-pass screen-print misregistration.
+      // Faint red ink offset slightly under a bone-white hairline. No
+      // shadow halo — that was the "web glow" effect the client called
+      // out as feeling too digital.
       if (ready && openProg < 1) {
-        const emblem  = getEmblemAt(cx, cy, lensH);
+        const emblem = getEmblemAt(cx, cy, lensH);
+        const a = (1 - openProg) * lensVis;
         fgCtx.save();
-        fgCtx.globalAlpha = (1 - openProg) * lensVis;
-        fgCtx.shadowColor = 'rgba(255,255,255,0.6)';
-        fgCtx.shadowBlur  = 28;
-        fgCtx.lineWidth   = 1.4;
-        fgCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+        fgCtx.lineCap = 'round';
+        fgCtx.lineJoin = 'round';
+        // Misregistered red ink, slightly offset.
+        fgCtx.save();
+        fgCtx.translate(1.4, 0.6);
+        fgCtx.globalAlpha = a * 0.42;
+        fgCtx.lineWidth = 0.9;
+        fgCtx.strokeStyle = 'rgba(206,5,5,1)';
         fgCtx.stroke(emblem);
-        fgCtx.shadowBlur = 0;
-        fgCtx.lineWidth = 0.6;
-        fgCtx.strokeStyle = 'rgba(255,255,255,0.95)';
+        fgCtx.restore();
+        // Main bone-white hairline.
+        fgCtx.globalAlpha = a * 0.95;
+        fgCtx.lineWidth = 0.7;
+        fgCtx.strokeStyle = 'rgba(232,230,224,1)';
         fgCtx.stroke(emblem);
         fgCtx.restore();
       }
