@@ -1,6 +1,6 @@
 /* ============================================================
  * BROKE — shared cart drawer + chrome
- * Mounts top chrome (emblem mark + nav + bag) and the drawer.
+ * Mounts top chrome (BROKE wordmark + nav + bag) and the drawer.
  * Auto-refreshes on add/update/remove.
  * ============================================================ */
 
@@ -8,19 +8,15 @@ import {
   getCart, addToCart, updateLine, removeLine, formatMoney,
 } from "/assets/shopify.js";
 
-const EMBLEM_SVG = `
-<svg viewBox="0 0 300 550" aria-hidden="true">
-  <use href="/assets/emblem.svg#emblem"/>
-</svg>`;
-
-// We don't have an SVG <use> entry-point; fetch path data once and inline-render.
+// The emblem no longer appears in the header chrome (per client
+// direction), but the drawer's empty-state moment still uses it.
+// Fetch path data once, cache for the session.
 let emblemMarkup = null;
 async function getEmblemMarkup() {
-  if (emblemMarkup) return emblemMarkup;
+  if (emblemMarkup !== null) return emblemMarkup;
   try {
     const r = await fetch("/assets/emblem.svg");
     const txt = await r.text();
-    // Strip XML declaration; keep root <svg>.
     emblemMarkup = txt.replace(/<\?xml[^?]*\?>/, "").trim();
   } catch {
     emblemMarkup = "";
@@ -33,34 +29,43 @@ async function getEmblemMarkup() {
 export async function mountChrome({ active = "" } = {}) {
   if (document.querySelector(".chrome")) return;
 
-  const emblem = await getEmblemMarkup();
   const wrap = document.createElement("div");
   wrap.className = "chrome";
+  // Per client direction: emblem dropped from the header — wordmark
+  // only, and BAG renders identically to INDEX / CATALOGUE.
   wrap.innerHTML = `
     <a class="mark" href="/" aria-label="BROKE — home">
-      <span class="emblem-mini">${emblem}</span>
       <span class="brand-word">BROKE</span>
     </a>
     <nav class="nav" aria-label="Primary">
       <a href="/" data-link="home"${active === "home" ? ' aria-current="page"' : ""}>Index</a>
       <a href="/shop/" data-link="shop"${active === "shop" ? ' aria-current="page"' : ""}>Catalogue</a>
       <button class="bag" data-open-cart aria-label="Open bag">
-        <span>Bag</span>
+        <span class="bag-label">Bag</span>
         <span class="count" data-bag-count data-empty="1">0</span>
       </button>
     </nav>
   `;
   document.body.appendChild(wrap);
 
-  // Quick styling for the inline mark
+  // Wordmark sizing — kept compact so it reads as a label rather than
+  // a centred logo. BAG label inherits the .nav rules verbatim so it
+  // matches INDEX / CATALOGUE exactly.
   const style = document.createElement("style");
   style.textContent = `
     .chrome .mark { align-items: center; }
-    .chrome .emblem-mini svg { width: 22px; height: 40px; fill: var(--ink); display: block; }
     .chrome .brand-word {
       font-family: var(--serif); font-size: 22px; letter-spacing: 0.12em;
       line-height: 1; display: block;
     }
+    .chrome .nav .bag {
+      /* font: inherit doesn't carry text-transform on every browser;
+         set explicitly so the button matches the surrounding nav. */
+      font-family: var(--sans); font-size: 11px;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+    .chrome .nav .bag:hover { color: var(--ink); }
     .chrome .nav a[aria-current="page"] { color: var(--ink); }
   `;
   document.head.appendChild(style);
