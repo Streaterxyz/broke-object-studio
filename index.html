@@ -112,7 +112,18 @@
     }
     #scroll-cue[data-show="1"] { opacity: calc(0.85 * var(--cue-fade)); }
     #scroll-cue:hover { opacity: var(--cue-fade); }
-    #scroll-cue .cue-line { width: 1px; height: 28px; background: var(--ink); opacity: 0.5; }
+    #scroll-cue .cue-line {
+      width: 1px; height: 28px; background: var(--ink); opacity: 0.5;
+      transition: background-color .35s ease, opacity .35s ease;
+    }
+    /* Pink as trace: the cue line briefly pulls pink on hover/focus.
+       Restrained accent — a heartbeat under the interaction, not a
+       brand colour. */
+    #scroll-cue:hover .cue-line,
+    #scroll-cue:focus-visible .cue-line {
+      background: var(--pink);
+      opacity: 0.85;
+    }
     #scroll-cue .cue-text {
       font-family: var(--sans);
       font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase;
@@ -147,7 +158,7 @@
       line-height: 0.98; font-weight: 400; letter-spacing: -0.01em;
     }
     .intro-band h1 em {
-      font-style: italic; color: var(--pink);
+      font-style: italic; color: var(--ink);
       font-family: var(--display); font-weight: 300;
     }
     .intro-band p {
@@ -601,19 +612,19 @@
 
       // Backdrop: blurred drawImage(video) into the canvas. This codepath
       // is proven to work on iOS (the user always saw the blurred reel).
-      // Pass 2 adds a film-stock colour grade (contrast + warm sepia) that
-      // relaxes as the lens opens, so the reveal lands at true colour.
+      // Monochrome film grade — slight contrast lift + heavy desaturation
+      // in the closed state, relaxing as the lens opens. No sepia: the
+      // colour system stays in black/bone/grey.
       ctx.clearRect(0, 0, W, H);
       if (vReady) {
         const bgBlur     = lerp(32, 0, openProg);
         const bgBright   = lerp(0.30, 1, openProg);
-        const bgSat      = lerp(0.55, 1, openProg);
+        const bgSat      = lerp(0.20, 1, openProg);
         const bgContrast = lerp(1.10, 1, openProg);
-        const bgSepia    = lerp(0.08, 0, openProg);
         ctx.save();
         ctx.filter =
           `blur(${bgBlur}px) brightness(${bgBright}) saturate(${bgSat}) ` +
-          `contrast(${bgContrast.toFixed(3)}) sepia(${bgSepia.toFixed(3)})`;
+          `contrast(${bgContrast.toFixed(3)})`;
         const f = fitCover(video.videoWidth, video.videoHeight, W, H);
         ctx.drawImage(video, f.x, f.y, f.w, f.h);
         ctx.restore();
@@ -645,22 +656,21 @@
         fgCtx.restore();
       }
 
-      // Outline strokes: two-pass screen-print misregistration.
-      // Faint red ink offset slightly under a bone-white hairline. No
-      // shadow halo — that was the "web glow" effect the client called
-      // out as feeling too digital.
+      // Outline strokes: two-pass screen-print misregistration in bone.
+      // Faint offset ink under a brighter bone-white hairline. No
+      // colour — the riso feel without breaking the monochrome system.
       if (ready && openProg < 1) {
         const emblem = getEmblemAt(cx, cy, lensH);
         const a = (1 - openProg) * lensVis;
         fgCtx.save();
         fgCtx.lineCap = 'round';
         fgCtx.lineJoin = 'round';
-        // Misregistered red ink, slightly offset.
+        // Misregistered low-opacity bone ink, slightly offset.
         fgCtx.save();
         fgCtx.translate(1.4, 0.6);
-        fgCtx.globalAlpha = a * 0.42;
+        fgCtx.globalAlpha = a * 0.30;
         fgCtx.lineWidth = 0.9;
-        fgCtx.strokeStyle = 'rgba(206,5,5,1)';
+        fgCtx.strokeStyle = 'rgba(232,230,224,1)';
         fgCtx.stroke(emblem);
         fgCtx.restore();
         // Main bone-white hairline.
@@ -671,9 +681,8 @@
         fgCtx.restore();
       }
 
-      // Pass 2 vignette: slight off-centre origin so it feels lens-cast
-      // rather than CSS-radial; a warm-tinted mid-stop (instead of pure
-      // black) gives it a film-stock feel; deeper corners.
+      // Monochrome vignette: off-centre origin so it doesn't feel
+      // mathematically perfect, but no warm tint. Pure neutral falloff.
       ctx.save();
       const vg = ctx.createRadialGradient(
         W * 0.48, H * 0.46, Math.min(W, H) * 0.22,
@@ -681,7 +690,7 @@
       );
       const va = 1 - openProg;
       vg.addColorStop(0,    'rgba(0,0,0,0)');
-      vg.addColorStop(0.55, `rgba(10,5,2,${(0.22 * va).toFixed(3)})`);
+      vg.addColorStop(0.55, `rgba(0,0,0,${(0.22 * va).toFixed(3)})`);
       vg.addColorStop(1,    `rgba(0,0,0,${(0.72 * va).toFixed(3)})`);
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
