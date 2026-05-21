@@ -18,9 +18,23 @@
   </script>
 
   <style>
+    /* ---- Light / dark theming (release page only) ----
+       The rest of the site stays in noir. Here we let the viewer
+       toggle between the dark default and a bone-on-bone light
+       mode to see the object in two different conditions. */
+    :root[data-theme="light"] {
+      --bg:        #ece9e3;
+      --bg-elev:   #f7f5f0;
+      --ink:       #0a0a0a;
+      --ink-dim:   rgba(10,10,10,0.62);
+      --ink-faint: rgba(10,10,10,0.28);
+      --hairline:  rgba(10,10,10,0.16);
+    }
+
     /* The scroll container is tall; the canvas is pinned. Scroll progress
        drives the 3D scene's keyframes. */
-    body { background: #050505; min-height: 100vh; }
+    html { background: var(--bg); transition: background-color .5s ease; }
+    body { background: var(--bg); min-height: 100vh; transition: background-color .5s ease, color .5s ease; }
 
     #lighter-stage {
       position: fixed; inset: 0; z-index: 1;
@@ -35,20 +49,31 @@
        Five scenes + intro/outro padding = 7 * 100vh. */
     .scroll-track { height: 700vh; position: relative; z-index: 2; }
 
-    /* Scene copy blocks — one per scene, positioned via scroll-snap.
-       Each block fades in/out around its scene threshold. */
+    /* Scene copy blocks — fixed to the viewport (not flowing with the
+       scroll track). JS drives opacity + translateY through each
+       scene's three-stage lifecycle:
+         enter  (0   - 15%  of phase) — rise from below, fade in
+         linger (15  - 75%  of phase) — held centred in viewport
+         exit   (75  - 100% of phase) — translate up, fade out
+       The linger window is the bulk of the phase so the copy reads
+       properly even on slow or paused scrolling. */
     .scene {
-      position: absolute; left: 0; right: 0;
-      padding: 0 var(--gutter);
+      position: fixed;
+      top: 38vh;
+      left: var(--gutter); right: var(--gutter);
+      z-index: 3;
       pointer-events: none;
+      opacity: 0;
+      transform: translateY(24px);
+      will-change: opacity, transform;
     }
     .scene-inner {
       max-width: 38ch;
       font-family: var(--sans);
-      opacity: 0;
-      transition: opacity .6s ease;
     }
-    .scene[data-active="1"] .scene-inner { opacity: 1; }
+    .scene[data-side="right"] .scene-inner {
+      margin-left: auto; text-align: right;
+    }
 
     .scene .scene-num {
       font-family: var(--display); font-size: 11px;
@@ -59,16 +84,12 @@
       font-family: var(--serif); font-weight: 400;
       font-size: clamp(22px, 2.6vw, 32px); line-height: 1.1;
       letter-spacing: -0.005em; margin-bottom: 14px;
+      color: var(--ink);
     }
     .scene p {
       font-family: var(--sans); font-size: 14px; line-height: 1.65;
       color: var(--ink-dim);
     }
-
-    /* Alternate left / right alignment per scene for rhythm. */
-    .scene[data-side="left"]  { top: 18vh; }
-    .scene[data-side="right"] { top: 60vh; text-align: right; }
-    .scene[data-side="right"] .scene-inner { margin-left: auto; }
 
     /* Colourway switcher — pinned top-right, but on a SECOND row beneath
        the global chrome (INDEX / CATALOGUE / BAG) so they don't collide. */
@@ -105,7 +126,16 @@
       font-family: var(--sans); font-size: 9px;
       letter-spacing: 0.36em; text-transform: uppercase;
       color: var(--ink-dim);
+      display: flex; align-items: center; gap: 14px;
     }
+    .theme-toggle {
+      font: inherit; color: var(--ink-dim);
+      border: 1px solid var(--hairline);
+      padding: 5px 10px;
+      background: transparent;
+      transition: color .25s, border-color .25s;
+    }
+    .theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
 
     /* End-of-scroll CTA — appears in scene 6 (the settle). */
     .release-cta {
@@ -162,6 +192,10 @@
   <style>
     /* Override z so grain sits above the 3D canvas (matches hero pattern). */
     .film-grain { z-index: 50; mix-blend-mode: soft-light; opacity: 0.85; pointer-events: none; }
+    /* In light mode, soft-light against a bone background washes out;
+       multiply turns the noise into a paper-grain texture instead. */
+    [data-theme="light"] .film-grain { mix-blend-mode: multiply; opacity: 0.45; }
+    [data-theme="light"] .grain { mix-blend-mode: multiply; opacity: 0.08; }
   </style>
 
   <!-- 3D stage — pinned to viewport, scroll-scrubbed -->
@@ -173,6 +207,7 @@
        not next to it. BROKE wordmark is carried by the chrome. -->
   <div class="edition-mark">
     <span>ED 01 · No 01 / 250</span>
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle light or dark mode">Light</button>
   </div>
 
   <div class="colourway-pin" role="group" aria-label="Colourway">
@@ -184,7 +219,7 @@
   <!-- Scroll track and scene copy. Each scene's `top` is set in JS to
        match the scroll progress threshold of its phase. -->
   <main class="scroll-track" id="scrollTrack">
-    <section class="scene" data-scene="1" data-side="left" style="top: 18vh;">
+    <section class="scene" data-scene="1" data-side="left">
       <div class="scene-inner">
         <div class="scene-num">Scene 01 — Approach</div>
         <h2>An object first, a tool second.</h2>
@@ -192,7 +227,7 @@
       </div>
     </section>
 
-    <section class="scene" data-scene="2" data-side="right" style="top: 120vh;">
+    <section class="scene" data-scene="2" data-side="right">
       <div class="scene-inner">
         <div class="scene-num">Scene 02 — The Open</div>
         <h2>A single hinge, the small click.</h2>
@@ -200,7 +235,7 @@
       </div>
     </section>
 
-    <section class="scene" data-scene="3" data-side="left" style="top: 240vh;">
+    <section class="scene" data-scene="3" data-side="left">
       <div class="scene-inner">
         <div class="scene-num">Scene 03 — Jet</div>
         <h2>Cut wind. Cut paper. Cut anything.</h2>
@@ -208,7 +243,7 @@
       </div>
     </section>
 
-    <section class="scene" data-scene="4" data-side="right" style="top: 360vh;">
+    <section class="scene" data-scene="4" data-side="right">
       <div class="scene-inner">
         <div class="scene-num">Scene 04 — Soft</div>
         <h2>Switch the flame, change the mood.</h2>
@@ -216,7 +251,7 @@
       </div>
     </section>
 
-    <section class="scene" data-scene="5" data-side="left" style="top: 480vh;">
+    <section class="scene" data-scene="5" data-side="left">
       <div class="scene-inner">
         <div class="scene-num">Scene 05 — Settle</div>
         <h2>It closes the way it opened.</h2>
@@ -242,6 +277,32 @@
   <script type="module">
     import * as THREE from "three";
     import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+    /* ---------- THEME (light / dark, page-specific) ----------
+       Persists across visits but only on this page (storage key
+       scoped to /release/ed-01/). Driven entirely by CSS custom
+       properties via [data-theme="light"]; JS only retunes the 3D
+       scene exposure so the metal reads correctly in both. */
+    const THEME_KEY = "broke:ed01:theme";
+    // Module-scope ref so applyTheme can retune the renderer once it
+    // exists. Using `typeof renderer` here doesn't work because a
+    // `const renderer = …` declared further down sits in the temporal
+    // dead zone, and `typeof` does NOT bypass TDZ for let/const.
+    let rendererRef = null;
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      const isLight = theme === "light";
+      const btn = document.querySelector("[data-theme-toggle]");
+      if (btn) btn.textContent = isLight ? "Dark" : "Light";
+      if (rendererRef) rendererRef.toneMappingExposure = isLight ? 1.15 : 0.95;
+    }
+    const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
+    applyTheme(savedTheme);
+    document.querySelector("[data-theme-toggle]").addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+    });
 
     /* ---------- COLOURWAYS ---------- */
     /* Phase 2 will swap real materials per colourway; for now we drive
@@ -274,6 +335,11 @@
     renderer.toneMappingExposure = 0.95;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     stage.appendChild(renderer.domElement);
+
+    // Hand the renderer to the theme handler so toggle clicks can
+    // adjust tone-mapping exposure live.
+    rendererRef = renderer;
+    applyTheme(document.documentElement.dataset.theme || "dark");
 
     function resize() {
       const w = window.innerWidth, h = window.innerHeight;
@@ -489,9 +555,11 @@
       softFlame.scale.x = 1 + Math.sin(now * 6) * 0.04;
     }
 
-    /* ---------- SCENE COPY VISIBILITY ----------
-       Each .scene becomes active when scroll progress is within its
-       phase. Simple intersection-style check based on scroll progress. */
+    /* ---------- SCENE COPY LIFECYCLE ----------
+       Each .scene moves through enter → linger → exit within its
+       phase's scroll range. The "linger" (15-75% of phase) is the
+       majority — copy stays centred long enough to actually be
+       read, even at fast scroll speeds. */
     const scenes = Array.from(document.querySelectorAll(".scene"));
     const sceneRanges = [
       [PHASES.approach[0], PHASES.open[0]],  // scene 1
@@ -502,13 +570,36 @@
     ];
     const ctaEl = document.querySelector(".release-cta");
 
+    const ENTER_END  = 0.15;  // fraction of phase: enter ends here
+    const LINGER_END = 0.75;  // and linger ends here; exit runs to 1.0
+    const ENTER_DY   = 24;    // px below centre at start
+    const EXIT_DY    = -28;   // px above centre at end
+
     function updateSceneVisibility(p) {
       scenes.forEach((s, i) => {
         const [lo, hi] = sceneRanges[i];
-        const active = p >= lo && p < hi + 0.02;
-        s.dataset.active = active ? "1" : "0";
+        const t = (p - lo) / (hi - lo); // local 0-1 within this scene's phase
+
+        let opacity = 0, dy = ENTER_DY;
+        if (t >= 0 && t < ENTER_END) {
+          const k = easeInOut(t / ENTER_END);
+          opacity = k;
+          dy = lerp(ENTER_DY, 0, k);
+        } else if (t >= ENTER_END && t <= LINGER_END) {
+          opacity = 1;
+          dy = 0;
+        } else if (t > LINGER_END && t <= 1.0) {
+          const k = easeInOut((t - LINGER_END) / (1 - LINGER_END));
+          opacity = 1 - k;
+          dy = lerp(0, EXIT_DY, k);
+        }
+
+        s.style.opacity = opacity.toFixed(3);
+        s.style.transform = `translateY(${dy.toFixed(1)}px)`;
       });
-      ctaEl.dataset.active = p >= PHASES.settle[0] ? "1" : "0";
+
+      // CTA appears once we're in the settle phase
+      ctaEl.dataset.active = p >= PHASES.settle[0] + 0.02 ? "1" : "0";
     }
 
     /* ---------- RENDER LOOP ---------- */
@@ -518,6 +609,9 @@
       // Smooth between scroll target and rendered progress
       renderProgress += (scrollProgress - renderProgress) * 0.12;
       applyKeyframes(renderProgress);
+      // Drive scene copy lifecycle off the same smoothed progress so the
+      // enter/linger/exit motion matches the model's animation curve.
+      updateSceneVisibility(renderProgress);
       renderer.render(scene, camera);
 
       if (!ready) {
@@ -529,16 +623,6 @@
     window.addEventListener("scroll", updateScrollProgress, { passive: true });
     updateScrollProgress();
     updateSceneVisibility(0);
-
-    // Throttled scene-visibility updates so we don't trash DOM each frame
-    let lastVisP = -1;
-    setInterval(() => {
-      if (Math.abs(scrollProgress - lastVisP) > 0.002) {
-        updateSceneVisibility(scrollProgress);
-        lastVisP = scrollProgress;
-      }
-    }, 60);
-
     tick();
 
     /* ---------- FILM GRAIN ANIMATOR (matches site-wide) ---------- */
