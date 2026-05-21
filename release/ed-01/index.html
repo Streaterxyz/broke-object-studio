@@ -407,9 +407,10 @@
       color: 0x1a1a1a, metalness: 1.0, roughness: 0.28,
     });
 
-    /* Engraved label texture: ED 01 (top-left), BROKE (centred), and
-       No 01/250 (bottom-left), drawn into a canvas and used as a
-       transparent overlay on the front face. */
+    /* Engraved label texture — ED 01 / BROKE / No 01/250.
+       Colour adapts to the colourway: dark text on brass/steel
+       (engraving casts shadow), lighter text on onyx (engraving
+       catches stray light). Rebuilt on every colourway swap. */
     function drawSpacedText(ctx, text, x, y, spacing) {
       let cursor = x;
       for (const ch of text) {
@@ -417,27 +418,32 @@
         cursor += ctx.measureText(ch).width + spacing;
       }
     }
-    function makeLabelTexture() {
+    const LABEL_INK = {
+      brass: "rgba(34,22,8,0.92)",
+      onyx:  "rgba(210,210,210,0.78)",
+      steel: "rgba(30,30,30,0.85)",
+    };
+    function makeLabelTexture(cw) {
       const c = document.createElement("canvas");
       c.width = 480; c.height = 744; // matches body face aspect
       const ctx = c.getContext("2d");
       ctx.clearRect(0, 0, c.width, c.height);
-      ctx.fillStyle = "rgba(0,0,0,0.85)";
+      ctx.fillStyle = LABEL_INK[cw] || LABEL_INK.onyx;
 
       // ED 01 — top-left whisper
-      ctx.font = '500 20px "Figtree", sans-serif';
+      ctx.font = '500 22px "Figtree", sans-serif';
       ctx.textAlign = "left";
-      drawSpacedText(ctx, "ED 01", 56, 110, 5);
+      drawSpacedText(ctx, "ED 01", 56, 116, 5);
 
       // BROKE — centred wordmark, serif
       ctx.textAlign = "center";
-      ctx.font = '400 60px "Gilda Display", "Cormorant Garamond", serif';
-      ctx.fillText("BROKE", c.width / 2, c.height / 2 + 18);
+      ctx.font = '400 72px "Gilda Display", "Cormorant Garamond", serif';
+      ctx.fillText("BROKE", c.width / 2, c.height / 2 + 22);
 
       // No 01 / 250 — bottom-left whisper
-      ctx.font = '500 20px "Figtree", sans-serif';
+      ctx.font = '500 22px "Figtree", sans-serif';
       ctx.textAlign = "left";
-      drawSpacedText(ctx, "No 01/250", 56, c.height - 92, 5);
+      drawSpacedText(ctx, "No 01/250", 56, c.height - 88, 5);
 
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -485,13 +491,13 @@
     lighter.add(body);
 
     /* ---- Engraved label decal — child of body so it rotates with it ---- */
-    const labelTex = makeLabelTexture();
+    let labelTex = makeLabelTexture(currentCW);
     const labelDecal = new THREE.Mesh(
       new THREE.PlaneGeometry(BODY.w * 0.82, BODY.h * 0.88),
       new THREE.MeshBasicMaterial({
         map: labelTex,
         transparent: true,
-        opacity: 0.62,
+        opacity: 0.95,
         depthWrite: false,
       }),
     );
@@ -598,6 +604,12 @@
           m.roughness = p.roughness;
           m.needsUpdate = true;
         }
+        // Rebuild the engraving in a contrasting ink for the new finish.
+        const oldTex = labelDecal.material.map;
+        labelTex = makeLabelTexture(cw);
+        labelDecal.material.map = labelTex;
+        labelDecal.material.needsUpdate = true;
+        if (oldTex) oldTex.dispose();
       });
     });
 
