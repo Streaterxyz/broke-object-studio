@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ED 01 · BROKE Marrickville</title>
+  <meta name="description" content="BROKE Edition 01 — a numbered, dual-flame object. One of 250." />
+  <link rel="stylesheet" href="/assets/brand.css" />
+
+  <!-- three.js modules via importmap (no build step) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <style>
+    /* The scroll container is tall; the canvas is pinned. Scroll progress
+       drives the 3D scene's keyframes. */
+    body { background: #050505; min-height: 100vh; }
+
+    #lighter-stage {
+      position: fixed; inset: 0; z-index: 1;
+      pointer-events: none;
+    }
+    #lighter-stage canvas {
+      width: 100%; height: 100%; display: block;
+      pointer-events: auto;
+    }
+
+    /* Scroll spacer — total scroll length = number of scenes * 100vh.
+       Five scenes + intro/outro padding = 7 * 100vh. */
+    .scroll-track { height: 700vh; position: relative; z-index: 2; }
+
+    /* Scene copy blocks — one per scene, positioned via scroll-snap.
+       Each block fades in/out around its scene threshold. */
+    .scene {
+      position: absolute; left: 0; right: 0;
+      padding: 0 var(--gutter);
+      pointer-events: none;
+    }
+    .scene-inner {
+      max-width: 38ch;
+      font-family: var(--sans);
+      opacity: 0;
+      transition: opacity .6s ease;
+    }
+    .scene[data-active="1"] .scene-inner { opacity: 1; }
+
+    .scene .scene-num {
+      font-family: var(--display); font-size: 11px;
+      letter-spacing: 0.36em; text-transform: uppercase;
+      color: var(--ink-dim); margin-bottom: 18px;
+    }
+    .scene h2 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(22px, 2.6vw, 32px); line-height: 1.1;
+      letter-spacing: -0.005em; margin-bottom: 14px;
+    }
+    .scene p {
+      font-family: var(--sans); font-size: 14px; line-height: 1.65;
+      color: var(--ink-dim);
+    }
+
+    /* Alternate left / right alignment per scene for rhythm. */
+    .scene[data-side="left"]  { top: 18vh; }
+    .scene[data-side="right"] { top: 60vh; text-align: right; }
+    .scene[data-side="right"] .scene-inner { margin-left: auto; }
+
+    /* Colourway switcher — pinned top-right always. */
+    .colourway-pin {
+      position: fixed; top: 22px; right: var(--gutter);
+      z-index: 60; display: flex; gap: 10px;
+      font-family: var(--sans); font-size: 9px;
+      letter-spacing: 0.36em; text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+    .colourway-pin .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--hairline);
+      background: transparent;
+      cursor: pointer;
+      transition: border-color .25s, color .25s;
+    }
+    .colourway-pin .chip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+    .colourway-pin .chip:hover { color: var(--ink); }
+    .colourway-pin .chip .swatch {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1px solid rgba(245,245,245,0.18);
+    }
+    .colourway-pin .chip[data-cw="brass"]  .swatch { background: linear-gradient(135deg, #d4a857, #8d6d2c); }
+    .colourway-pin .chip[data-cw="onyx"]   .swatch { background: linear-gradient(135deg, #1a1a1a, #050505); }
+    .colourway-pin .chip[data-cw="steel"]  .swatch { background: linear-gradient(135deg, #c8c8c8, #6e6e6e); }
+
+    /* Edition counter — top-left, sits where the chrome mark sits on
+       other pages. Whisper register. */
+    .edition-mark {
+      position: fixed; top: 22px; left: var(--gutter); z-index: 60;
+      font-family: var(--sans); font-size: 9px;
+      letter-spacing: 0.36em; text-transform: uppercase;
+      color: var(--ink-dim); display: flex; flex-direction: column; gap: 4px;
+    }
+    .edition-mark strong {
+      font-family: var(--serif); font-weight: 400; font-size: 16px;
+      letter-spacing: 0.12em; color: var(--ink);
+    }
+
+    /* End-of-scroll CTA — appears in scene 6 (the settle). */
+    .release-cta {
+      position: absolute; left: 50%; bottom: 12vh;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      opacity: 0; transition: opacity .8s ease;
+      text-align: center;
+    }
+    .release-cta[data-active="1"] { opacity: 1; }
+    .release-cta .price {
+      font-family: var(--display); font-size: 14px;
+      letter-spacing: 0.32em; color: var(--ink-dim); text-transform: uppercase;
+    }
+    .release-cta .price strong { color: var(--ink); font-weight: 400; }
+    .release-cta .btn { min-width: 240px; }
+
+    /* WebGL fallback / loading state */
+    .stage-loading {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--sans); font-size: 9px;
+      letter-spacing: 0.36em; text-transform: uppercase;
+      color: var(--ink-faint);
+      transition: opacity .6s ease;
+    }
+    .stage-loading[data-done="1"] { opacity: 0; pointer-events: none; }
+
+    /* Reduced motion: hold model still at scene 1's pose. */
+    @media (prefers-reduced-motion: reduce) {
+      .scene .scene-inner { opacity: 1 !important; transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Film grain (matching the rest of the site) -->
+  <div class="film-grain" aria-hidden="true">
+    <svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="film-grain-filter" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence id="film-grain-turb" type="fractalNoise" baseFrequency="1.6" numOctaves="2" stitchTiles="stitch" seed="2" />
+          <feColorMatrix type="matrix" values="
+            1 0 0 0 0
+            0 1 0 0 0
+            0 0 1 0 0
+            0 0 0 0.9 0" />
+        </filter>
+      </defs>
+      <rect width="800" height="800" filter="url(#film-grain-filter)" />
+    </svg>
+  </div>
+  <style>
+    /* Override z so grain sits above the 3D canvas (matches hero pattern). */
+    .film-grain { z-index: 50; mix-blend-mode: soft-light; opacity: 0.85; pointer-events: none; }
+  </style>
+
+  <!-- 3D stage — pinned to viewport, scroll-scrubbed -->
+  <div id="lighter-stage" aria-hidden="true">
+    <div class="stage-loading">Loading object</div>
+  </div>
+
+  <!-- Top corner marks -->
+  <div class="edition-mark">
+    <span>ED 01 · No 01 / 250</span>
+    <strong>BROKE</strong>
+  </div>
+
+  <div class="colourway-pin" role="group" aria-label="Colourway">
+    <button class="chip" data-cw="brass" aria-pressed="false"><span class="swatch"></span>Brass</button>
+    <button class="chip" data-cw="onyx"  aria-pressed="true"><span class="swatch"></span>Onyx</button>
+    <button class="chip" data-cw="steel" aria-pressed="false"><span class="swatch"></span>Steel</button>
+  </div>
+
+  <!-- Scroll track and scene copy. Each scene's `top` is set in JS to
+       match the scroll progress threshold of its phase. -->
+  <main class="scroll-track" id="scrollTrack">
+    <section class="scene" data-scene="1" data-side="left" style="top: 18vh;">
+      <div class="scene-inner">
+        <div class="scene-num">Scene 01 — Approach</div>
+        <h2>An object first, a tool second.</h2>
+        <p>Edition 01 from BROKE Marrickville. Numbered, brushed, weighted. The first release in a quiet series of objects that earn their keep.</p>
+      </div>
+    </section>
+
+    <section class="scene" data-scene="2" data-side="right" style="top: 120vh;">
+      <div class="scene-inner">
+        <div class="scene-num">Scene 02 — The Open</div>
+        <h2>A single hinge, the small click.</h2>
+        <p>The cap rises in one motion. No spring, no battery — just brass on brass, machined to a hairline. The kind of sound you flick out of habit.</p>
+      </div>
+    </section>
+
+    <section class="scene" data-scene="3" data-side="left" style="top: 240vh;">
+      <div class="scene-inner">
+        <div class="scene-num">Scene 03 — Jet</div>
+        <h2>Cut wind. Cut paper. Cut anything.</h2>
+        <p>A focused jet for the cigar end, the candle in a draft, the bonfire at dusk. Refillable butane, single-action piezo. Built to live in a pocket for a decade.</p>
+      </div>
+    </section>
+
+    <section class="scene" data-scene="4" data-side="right" style="top: 360vh;">
+      <div class="scene-inner">
+        <div class="scene-num">Scene 04 — Soft</div>
+        <h2>Switch the flame, change the mood.</h2>
+        <p>A turn of the dial swaps the jet for a soft cousin — a low, slow flame for ritual rather than work. The same object, two registers.</p>
+      </div>
+    </section>
+
+    <section class="scene" data-scene="5" data-side="left" style="top: 480vh;">
+      <div class="scene-inner">
+        <div class="scene-num">Scene 05 — Settle</div>
+        <h2>It closes the way it opened.</h2>
+        <p>The cap drops, the flame ends. An object designed to be returned to the pocket, the desk, the shelf — not displayed under glass.</p>
+      </div>
+    </section>
+
+    <div class="release-cta" data-scene="6">
+      <div class="price">Edition 01 · <strong>$420 AUD</strong></div>
+      <a class="btn" href="#" data-cta-add>Reserve — 1 of 250</a>
+      <div class="price" style="opacity: 0.6">Free local delivery · Marrickville</div>
+    </div>
+  </main>
+
+  <!-- Existing brand chrome (BROKE wordmark + nav) -->
+  <script type="module" src="/assets/cart.js"></script>
+  <script type="module">
+    import { mountChrome } from "/assets/cart.js";
+    mountChrome({ active: "" });
+  </script>
+
+  <!-- three.js scene -->
+  <script type="module">
+    import * as THREE from "three";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+    /* ---------- COLOURWAYS ---------- */
+    /* Phase 2 will swap real materials per colourway; for now we drive
+       the brushed-metal look with three PBR presets. */
+    const COLOURWAYS = {
+      brass: { color: 0xb8893a, roughness: 0.36, metalness: 1.0, anisotropy: 0.85 },
+      onyx:  { color: 0x101010, roughness: 0.42, metalness: 1.0, anisotropy: 0.85 },
+      steel: { color: 0x9c9ea1, roughness: 0.32, metalness: 1.0, anisotropy: 0.85 },
+    };
+    let currentCW = "onyx";
+
+    /* ---------- THREE.JS BOILERPLATE ---------- */
+    const stage = document.getElementById("lighter-stage");
+    const loadingEl = stage.querySelector(".stage-loading");
+
+    const scene = new THREE.Scene();
+    scene.background = null; // transparent so page bg shows through
+
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    camera.position.set(0, 0.15, 5.4);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    stage.appendChild(renderer.domElement);
+
+    function resize() {
+      const w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    /* ---------- ENVIRONMENT (PBR reflections on metal) ---------- */
+    /* RoomEnvironment synthesises a studio HDR procedurally — no asset
+       download, perfect for the placeholder. Phase 2 will swap in a real
+       .hdr to match the noir mood. */
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    /* Soft key light from the upper-left to define the form. */
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(-3, 4, 3);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0xffeed0, 0.4);
+    rimLight.position.set(2, 1.5, -2);
+    scene.add(rimLight);
+
+    /* ---------- PLACEHOLDER LIGHTER ----------
+       Composed of separate meshes so each part can animate independently
+       in the same way the real glTF model will:
+         - lighter (group, the chassis)
+         - topCap (hinged cap mesh, parented to a pivot at hinge axis)
+         - slider (the textured striker on the front)
+         - jetFlame, softFlame (visible toggled by scroll phase) */
+    const lighter = new THREE.Group();
+    scene.add(lighter);
+
+    function makeMetalMat(cw) {
+      const p = COLOURWAYS[cw];
+      return new THREE.MeshPhysicalMaterial({
+        color: p.color,
+        metalness: p.metalness,
+        roughness: p.roughness,
+        clearcoat: 0.15,
+        clearcoatRoughness: 0.4,
+      });
+    }
+
+    let bodyMat = makeMetalMat(currentCW);
+    let capMat  = makeMetalMat(currentCW);
+    let slideMat = new THREE.MeshPhysicalMaterial({
+      color: 0xb0b0b0, metalness: 1.0, roughness: 0.5,
+    });
+
+    // Body (chassis)
+    const body = new THREE.Mesh(
+      roundedBox(1.0, 1.4, 0.55, 0.06, 4),
+      bodyMat,
+    );
+    lighter.add(body);
+
+    // Hinge group — pivot at top-back edge of body so cap rotates around it
+    const hinge = new THREE.Group();
+    hinge.position.set(0, 0.7, -0.275);
+    lighter.add(hinge);
+    const cap = new THREE.Mesh(
+      roundedBox(1.0, 0.30, 0.55, 0.05, 4),
+      capMat,
+    );
+    cap.position.set(0, 0.15, 0.275); // offset so its base sits on hinge axis
+    hinge.add(cap);
+
+    // Slider (front textured strip)
+    const slider = new THREE.Mesh(
+      roundedBox(0.36, 0.45, 0.05, 0.02, 3),
+      slideMat,
+    );
+    slider.position.set(0, -0.05, 0.28);
+    lighter.add(slider);
+
+    // Jet flame — a simple emissive cone
+    const jetFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.08, 0.45, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0x6fa8ff, emissive: 0x4a7cd6, emissiveIntensity: 2.0,
+        transparent: true, opacity: 0.0,
+      }),
+    );
+    jetFlame.position.set(0, 1.1, 0);
+    lighter.add(jetFlame);
+
+    // Soft flame — taller, warmer
+    const softFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.16, 0.7, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0xffb068, emissive: 0xff7822, emissiveIntensity: 1.8,
+        transparent: true, opacity: 0.0,
+      }),
+    );
+    softFlame.position.set(0, 1.2, 0);
+    lighter.add(softFlame);
+
+    /* Simple rounded-box helper since BoxGeometry doesn't round.
+       Stand-in until we have the real model. */
+    function roundedBox(w, h, d, r, smoothness) {
+      const shape = new THREE.Shape();
+      const x = -w / 2, y = -h / 2;
+      shape.moveTo(x + r, y);
+      shape.lineTo(x + w - r, y);
+      shape.quadraticCurveTo(x + w, y, x + w, y + r);
+      shape.lineTo(x + w, y + h - r);
+      shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      shape.lineTo(x + r, y + h);
+      shape.quadraticCurveTo(x, y + h, x, y + h - r);
+      shape.lineTo(x, y + r);
+      shape.quadraticCurveTo(x, y, x + r, y);
+      return new THREE.ExtrudeGeometry(shape, {
+        depth: d,
+        bevelEnabled: true,
+        bevelThickness: r * 0.6,
+        bevelSize: r * 0.6,
+        bevelSegments: smoothness,
+        curveSegments: smoothness * 4,
+      }).translate(0, 0, -d / 2);
+    }
+
+    /* ---------- COLOURWAY SWITCHER ---------- */
+    document.querySelectorAll(".colourway-pin .chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cw = btn.dataset.cw;
+        if (cw === currentCW) return;
+        currentCW = cw;
+        document.querySelectorAll(".colourway-pin .chip").forEach((b) => {
+          b.setAttribute("aria-pressed", b.dataset.cw === cw ? "true" : "false");
+        });
+        const p = COLOURWAYS[cw];
+        for (const m of [bodyMat, capMat]) {
+          m.color.setHex(p.color);
+          m.roughness = p.roughness;
+          m.needsUpdate = true;
+        }
+      });
+    });
+
+    /* ---------- SCROLL-DRIVEN KEYFRAMES ---------- */
+    /* Scroll progress 0-1 maps to phases:
+         0.00 - 0.15  approach + rotate
+         0.15 - 0.32  open
+         0.32 - 0.52  jet ignites
+         0.52 - 0.70  switch to soft
+         0.70 - 0.86  close
+         0.86 - 1.00  settle + CTA hold */
+    const PHASES = {
+      approach: [0.00, 0.15],
+      open:     [0.15, 0.32],
+      jet:      [0.32, 0.52],
+      soft:     [0.52, 0.70],
+      close:    [0.70, 0.86],
+      settle:   [0.86, 1.00],
+    };
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    function phaseT(p, [lo, hi]) { return clamp((p - lo) / (hi - lo), 0, 1); }
+
+    /* Smoothed scroll so the model moves with weight, not jitter. */
+    let scrollProgress = 0;
+    let renderProgress = 0;
+
+    function updateScrollProgress() {
+      const track = document.getElementById("scrollTrack");
+      const total = track.offsetHeight - window.innerHeight;
+      scrollProgress = clamp(window.scrollY / total, 0, 1);
+    }
+
+    function applyKeyframes(p) {
+      // Approach: dolly in + Y rotate 360
+      const tA = easeInOut(phaseT(p, PHASES.approach));
+      const tO = easeInOut(phaseT(p, PHASES.open));
+      const tJ = easeInOut(phaseT(p, PHASES.jet));
+      const tS = easeInOut(phaseT(p, PHASES.soft));
+      const tC = easeInOut(phaseT(p, PHASES.close));
+
+      // Y rotation: full turn during approach, then settle facing-front-ish for open
+      const approachRot = tA * Math.PI * 2;
+      // Slight tilt during open / flame phases for a 3/4 read
+      const settleRot = lerp(0, Math.PI * 0.08, Math.max(tO, tJ, tS));
+      lighter.rotation.y = lerp(approachRot, Math.PI * 2 + settleRot, tO);
+
+      // X tilt subtly to face camera
+      lighter.rotation.x = lerp(0.04, -0.06, Math.max(tO, tJ, tS, tC));
+
+      // Camera dolly
+      camera.position.z = lerp(5.4, 4.2, tA);
+
+      // Open cap: rotate around hinge.x from 0 to -1.1 rad (~63°)
+      const openAmt = (1 - tC) * tO; // open during open phase, reverse during close
+      hinge.rotation.x = -1.1 * openAmt;
+
+      // Slider rises slightly during the open
+      slider.position.y = lerp(-0.05, 0.05, openAmt);
+
+      // Flames
+      // jet visible during jet phase, fades out as soft fades in during switch
+      const jetVisible = tJ * (1 - tS) * (1 - tC);
+      const softVisible = tS * (1 - tC);
+      jetFlame.material.opacity = jetVisible;
+      softFlame.material.opacity = softVisible;
+
+      // Flame flicker
+      const now = performance.now() * 0.005;
+      jetFlame.scale.y = 1 + Math.sin(now * 7) * 0.05 + Math.sin(now * 11) * 0.03;
+      softFlame.scale.y = 1 + Math.sin(now * 4) * 0.08 + Math.sin(now * 9) * 0.04;
+      softFlame.scale.x = 1 + Math.sin(now * 6) * 0.04;
+    }
+
+    /* ---------- SCENE COPY VISIBILITY ----------
+       Each .scene becomes active when scroll progress is within its
+       phase. Simple intersection-style check based on scroll progress. */
+    const scenes = Array.from(document.querySelectorAll(".scene"));
+    const sceneRanges = [
+      [PHASES.approach[0], PHASES.open[0]],  // scene 1
+      [PHASES.open[0],     PHASES.jet[0]],   // scene 2
+      [PHASES.jet[0],      PHASES.soft[0]],  // scene 3
+      [PHASES.soft[0],     PHASES.close[0]], // scene 4
+      [PHASES.close[0],    PHASES.settle[0]],// scene 5
+    ];
+    const ctaEl = document.querySelector(".release-cta");
+
+    function updateSceneVisibility(p) {
+      scenes.forEach((s, i) => {
+        const [lo, hi] = sceneRanges[i];
+        const active = p >= lo && p < hi + 0.02;
+        s.dataset.active = active ? "1" : "0";
+      });
+      ctaEl.dataset.active = p >= PHASES.settle[0] ? "1" : "0";
+    }
+
+    /* ---------- RENDER LOOP ---------- */
+    let ready = false;
+    function tick() {
+      requestAnimationFrame(tick);
+      // Smooth between scroll target and rendered progress
+      renderProgress += (scrollProgress - renderProgress) * 0.12;
+      applyKeyframes(renderProgress);
+      renderer.render(scene, camera);
+
+      if (!ready) {
+        ready = true;
+        loadingEl.dataset.done = "1";
+      }
+    }
+
+    window.addEventListener("scroll", updateScrollProgress, { passive: true });
+    updateScrollProgress();
+    updateSceneVisibility(0);
+
+    // Throttled scene-visibility updates so we don't trash DOM each frame
+    let lastVisP = -1;
+    setInterval(() => {
+      if (Math.abs(scrollProgress - lastVisP) > 0.002) {
+        updateSceneVisibility(scrollProgress);
+        lastVisP = scrollProgress;
+      }
+    }, 60);
+
+    tick();
+
+    /* ---------- FILM GRAIN ANIMATOR (matches site-wide) ---------- */
+    const turb = document.getElementById("film-grain-turb");
+    if (turb && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const seeds = [2, 9, 4, 7, 3, 8, 5, 1, 6, 10];
+      let i = 0;
+      setInterval(() => {
+        turb.setAttribute("seed", String(seeds[i++ % seeds.length]));
+      }, 80);
+    }
+  </script>
+</body>
+</html>
