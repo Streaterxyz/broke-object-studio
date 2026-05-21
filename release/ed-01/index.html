@@ -70,9 +70,10 @@
     .scene[data-side="right"] { top: 60vh; text-align: right; }
     .scene[data-side="right"] .scene-inner { margin-left: auto; }
 
-    /* Colourway switcher — pinned top-right always. */
+    /* Colourway switcher — pinned top-right, but on a SECOND row beneath
+       the global chrome (INDEX / CATALOGUE / BAG) so they don't collide. */
     .colourway-pin {
-      position: fixed; top: 22px; right: var(--gutter);
+      position: fixed; top: 64px; right: var(--gutter);
       z-index: 60; display: flex; gap: 10px;
       font-family: var(--sans); font-size: 9px;
       letter-spacing: 0.36em; text-transform: uppercase;
@@ -96,17 +97,14 @@
     .colourway-pin .chip[data-cw="onyx"]   .swatch { background: linear-gradient(135deg, #1a1a1a, #050505); }
     .colourway-pin .chip[data-cw="steel"]  .swatch { background: linear-gradient(135deg, #c8c8c8, #6e6e6e); }
 
-    /* Edition counter — top-left, sits where the chrome mark sits on
-       other pages. Whisper register. */
+    /* Edition counter — second row, beneath the global chrome's BROKE
+       wordmark. No duplicate "BROKE" text here; the chrome already
+       carries that. Whisper register. */
     .edition-mark {
-      position: fixed; top: 22px; left: var(--gutter); z-index: 60;
+      position: fixed; top: 64px; left: var(--gutter); z-index: 60;
       font-family: var(--sans); font-size: 9px;
       letter-spacing: 0.36em; text-transform: uppercase;
-      color: var(--ink-dim); display: flex; flex-direction: column; gap: 4px;
-    }
-    .edition-mark strong {
-      font-family: var(--serif); font-weight: 400; font-size: 16px;
-      letter-spacing: 0.12em; color: var(--ink);
+      color: var(--ink-dim);
     }
 
     /* End-of-scroll CTA — appears in scene 6 (the settle). */
@@ -171,10 +169,10 @@
     <div class="stage-loading">Loading object</div>
   </div>
 
-  <!-- Top corner marks -->
+  <!-- Page-specific edition counter — sits beneath the global chrome,
+       not next to it. BROKE wordmark is carried by the chrome. -->
   <div class="edition-mark">
     <span>ED 01 · No 01 / 250</span>
-    <strong>BROKE</strong>
   </div>
 
   <div class="colourway-pin" role="group" aria-label="Colourway">
