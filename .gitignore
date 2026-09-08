@@ -20,3 +20,7 @@ BROKE VISUAL IDENTITY*
 node_modules/
 dist/
 build/
+
+# Blender automatic backup files
+*.blend1
+*.blend2

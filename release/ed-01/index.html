@@ -136,6 +136,12 @@
       transition: color .25s, border-color .25s;
     }
     .theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
+    .sound-toggle {
+      position: fixed; bottom: 24px; left: var(--gutter); z-index: 60;
+      font-family: var(--sans); font-size: 9px; letter-spacing: .16em;
+      text-transform: uppercase; background: var(--bg);
+    }
+    .sound-toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
 
     /* End-of-scroll CTA — appears in scene 6 (the settle). */
     .release-cta {
@@ -164,9 +170,48 @@
     }
     .stage-loading[data-done="1"] { opacity: 0; pointer-events: none; }
 
+    .mobile-menu, .mobile-links, .mobile-edition, .mobile-copy { display: none; }
+    @media (max-width: 760px) {
+      :root { --caption-top: 54svh; }
+      .chrome { height: 60px; padding: 8px 20px; background: var(--bg); }
+      .chrome .mark { min-height: 44px; }
+      .chrome .nav { gap: 16px; }
+      .chrome .nav > a { display: none; }
+      .chrome .nav button { min-height: 44px; min-width: 44px; }
+      .mobile-menu { display: block; font: inherit; color: var(--ink); text-transform: uppercase; letter-spacing: .12em; }
+      .mobile-links:not([hidden]) { display: flex; position: fixed; top: 60px; left: 0; right: 0; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--hairline); gap: 24px; z-index: 90; }
+      .mobile-links a { display: flex; align-items: center; min-height: 44px; font: 13px var(--sans); }
+      .colourway-pin { top: 60px; left: 0; right: 0; padding: 6px 20px; gap: 8px; background: var(--bg); border-bottom: 1px solid var(--hairline); }
+      .colourway-pin .chip { flex: 1; justify-content: center; min-height: 44px; padding: 6px; font-size: 10px; letter-spacing: .1em; }
+      .edition-mark { position: static; }
+      .edition-mark > span { display: none; }
+      .edition-mark .theme-toggle, .sound-toggle { position: fixed; top: auto; bottom: max(8px, env(safe-area-inset-bottom)); min-height: 44px; font: 11px var(--sans); letter-spacing: .1em; background: var(--bg); z-index: 70; }
+      .edition-mark .theme-toggle { right: 20px; left: auto; }
+      .sound-toggle { left: 20px; }
+      body::after { content: ''; position: fixed; bottom: 0; height: calc(60px + env(safe-area-inset-bottom)); left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--hairline); z-index: 65; }
+      #lighter-stage { top: 116px; bottom: auto; height: calc(var(--caption-top) - 116px); }
+      #lighter-stage canvas { pointer-events: none; }
+      .scene, .release-cta { position: fixed; top: var(--caption-top); bottom: calc(62px + env(safe-area-inset-bottom)); left: 0; right: 0; padding: 20px; background: var(--bg); border-top: 1px solid var(--hairline); overflow-y: auto; transform: none !important; text-align: left; transition: opacity .18s ease; }
+      .scene .full-copy, .scene:first-child .scene-num { display: none; }
+      .scene .mobile-copy { display: block; }
+      .scene { padding: 16px 20px; }
+      .scene, .release-cta { transition: none; }
+      .scene .scene-inner, .scene[data-side="right"] .scene-inner { max-width: none; margin: 0; text-align: left; }
+      .scene .scene-num { font-size: 10px; letter-spacing: .18em; margin-bottom: 10px; color: var(--ink); }
+      .scene h2 { font-size: 26px; line-height: 1.15; margin-bottom: 12px; }
+      .scene p { font-size: 16px; line-height: 1.5; color: var(--ink); }
+      .mobile-edition { display: block; font: 10px var(--sans); letter-spacing: .12em; margin-bottom: 8px; color: var(--ink-dim); }
+      .release-cta { align-items: flex-start; justify-content: flex-start; gap: 16px; z-index: 3; }
+      .release-cta .price { font-size: 11px; line-height: 1.5; letter-spacing: .12em; }
+      .release-cta .btn { min-height: 44px; }
+      body .film-grain, body .grain { display: none; }
+      .scene[hidden], .release-cta[hidden] { display: none; }
+    }
+
     /* Reduced motion: hold model still at scene 1's pose. */
     @media (prefers-reduced-motion: reduce) {
       .scene .scene-inner { opacity: 1 !important; transition: none; }
+      .scene { animation: none; }
     }
   </style>
 </head>
@@ -209,6 +254,7 @@
     <span>ED 01 · No 01 / 250</span>
     <button class="theme-toggle" data-theme-toggle aria-label="Toggle light or dark mode">Light</button>
   </div>
+  <button class="theme-toggle sound-toggle" data-sound-toggle aria-label="Lighter sounds" aria-pressed="false">Sound off</button>
 
   <div class="colourway-pin" role="group" aria-label="Colourway">
     <button class="chip" data-cw="brass" aria-pressed="false"><span class="swatch"></span>Brass</button>
@@ -221,9 +267,10 @@
   <main class="scroll-track" id="scrollTrack">
     <section class="scene" data-scene="1" data-side="left">
       <div class="scene-inner">
+        <div class="mobile-edition">ED 01 · No 01 / 250</div>
         <div class="scene-num">Scene 01 — Approach</div>
         <h2>An object first, a tool second.</h2>
-        <p>Edition 01 from BROKE Marrickville. Numbered, brushed, weighted. The first release in a quiet series of objects that earn their keep.</p>
+        <p class="full-copy">Edition 01 from BROKE Marrickville. Numbered, brushed, weighted. The first release in a quiet series of objects that earn their keep.</p><p class="mobile-copy">Numbered, brushed, weighted. Edition 01 begins a quiet series of objects that earn their keep.</p>
       </div>
     </section>
 
@@ -231,7 +278,7 @@
       <div class="scene-inner">
         <div class="scene-num">Scene 02 — The Open</div>
         <h2>A single hinge, the small click.</h2>
-        <p>The cap rises in one motion. No spring, no battery — just brass on brass, machined to a hairline. The kind of sound you flick out of habit.</p>
+        <p class="full-copy">The cap rises in one motion. No spring, no battery — just brass on brass, machined to a hairline. The kind of sound you flick out of habit.</p><p class="mobile-copy">A single motion. A small click. The lid lifts to reveal the mechanism beneath.</p>
       </div>
     </section>
 
@@ -239,7 +286,7 @@
       <div class="scene-inner">
         <div class="scene-num">Scene 03 — Jet</div>
         <h2>Cut wind. Cut paper. Cut anything.</h2>
-        <p>A focused jet for the cigar end, the candle in a draft, the bonfire at dusk. Refillable butane, single-action piezo. Built to live in a pocket for a decade.</p>
+        <p class="full-copy">A focused jet for the cigar end, the candle in a draft, the bonfire at dusk. Refillable butane, single-action piezo. Built to live in a pocket for a decade.</p><p class="mobile-copy">A focused blue jet, ready for a candle in a draft or a cigar end.</p>
       </div>
     </section>
 
@@ -247,7 +294,7 @@
       <div class="scene-inner">
         <div class="scene-num">Scene 04 — Soft</div>
         <h2>Switch the flame, change the mood.</h2>
-        <p>A turn of the dial swaps the jet for a soft cousin — a low, slow flame for ritual rather than work. The same object, two registers.</p>
+        <p class="full-copy">A turn of the dial swaps the jet for a soft cousin — a low, slow flame for ritual rather than work. The same object, two registers.</p><p class="mobile-copy">Switch to a softer flame. The same object, a slower ritual.</p>
       </div>
     </section>
 
@@ -255,7 +302,7 @@
       <div class="scene-inner">
         <div class="scene-num">Scene 05 — Settle</div>
         <h2>It closes the way it opened.</h2>
-        <p>The cap drops, the flame ends. An object designed to be returned to the pocket, the desk, the shelf — not displayed under glass.</p>
+        <p class="full-copy">The cap drops, the flame ends. An object designed to be returned to the pocket, the desk, the shelf — not displayed under glass.</p><p class="mobile-copy">The lid drops and the flame ends. Ready for the pocket, the desk, the shelf.</p>
       </div>
     </section>
 
@@ -270,13 +317,43 @@
   <script type="module" src="/assets/cart.js"></script>
   <script type="module">
     import { mountChrome } from "/assets/cart.js";
-    mountChrome({ active: "" });
+    await mountChrome({ active: "" });
+    const nav = document.querySelector('.chrome .nav');
+    const menu = document.createElement('button');
+    menu.className = 'mobile-menu';
+    menu.textContent = 'Menu';
+    menu.setAttribute('aria-expanded', 'false');
+    menu.setAttribute('aria-controls', 'release-mobile-links');
+    nav.prepend(menu);
+    const links = document.createElement('nav');
+    links.className = 'mobile-links';
+    links.id = 'release-mobile-links';
+    links.setAttribute('aria-label', 'Mobile navigation');
+    links.hidden = true;
+    links.innerHTML = '<a href="/">Index</a><a href="/shop/">Catalogue</a>';
+    document.body.append(links);
+    function closeMenu() { links.hidden = true; menu.setAttribute('aria-expanded', 'false'); }
+    menu.addEventListener('click', () => {
+      links.hidden = !links.hidden;
+      menu.setAttribute('aria-expanded', String(!links.hidden));
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !links.hidden) { closeMenu(); menu.focus(); }
+    });
+    document.addEventListener('click', (event) => {
+      if (!links.contains(event.target) && !menu.contains(event.target)) closeMenu();
+    });
+    window.matchMedia('(max-width: 760px)').addEventListener('change', closeMenu);
   </script>
 
   <!-- three.js scene -->
   <script type="module">
     import * as THREE from "three";
     import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { LighterAudio } from "/assets/lighter-audio.js";
+
+    const lighterAudio = new LighterAudio(document.querySelector('[data-sound-toggle]'));
 
     /* ---------- THEME (light / dark, page-specific) ----------
        Persists across visits but only on this page (storage key
@@ -305,16 +382,10 @@
     });
 
     /* ---------- COLOURWAYS ---------- */
-    /* Phase 2 will swap real materials per colourway; for now we drive
-       the brushed-metal look with three PBR presets. */
-    const COLOURWAYS = {
-      brass: { color: 0xb8893a, roughness: 0.36, metalness: 1.0, anisotropy: 0.85 },
-      onyx:  { color: 0x101010, roughness: 0.42, metalness: 1.0, anisotropy: 0.85 },
-      steel: { color: 0x9c9ea1, roughness: 0.32, metalness: 1.0, anisotropy: 0.85 },
-    };
     let currentCW = "onyx";
 
     /* ---------- THREE.JS BOILERPLATE ---------- */
+    const mobileLayout = window.matchMedia("(max-width: 760px)");
     const stage = document.getElementById("lighter-stage");
     const loadingEl = stage.querySelector(".stage-loading");
 
@@ -342,20 +413,30 @@
     applyTheme(document.documentElement.dataset.theme || "dark");
 
     function resize() {
-      const w = window.innerWidth, h = window.innerHeight;
+      const { width: w, height: h } = stage.getBoundingClientRect();
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     }
     window.addEventListener("resize", resize);
     resize();
+    new ResizeObserver(resize).observe(stage);
 
     /* ---------- ENVIRONMENT (PBR reflections on metal) ---------- */
-    /* RoomEnvironment synthesises a studio HDR procedurally — no asset
-       download, perfect for the placeholder. Phase 2 will swap in a real
-       .hdr to match the noir mood. */
+    /* Studio reflections reveal the model's brushed faces and cut bevels. */
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const studio = new RoomEnvironment();
+    // Tall reflection cards keep the front of dark polished metal legible.
+    for (const [x, y, z, w, h, power] of [[-2, 1, 4, 2.8, 6, 5], [3, 0, 3, 1, 5, 3]]) {
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color().setRGB(power, power, power) }));
+      card.position.set(x, y, z);
+      card.lookAt(0, 0, 0);
+      studio.add(card);
+    }
+    scene.environment = pmrem.fromScene(studio, 0.04).texture;
+    studio.dispose();
+    pmrem.dispose();
 
     /* Soft key light from the upper-left to define the form. */
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -365,253 +446,80 @@
     rimLight.position.set(2, 1.5, -2);
     scene.add(rimLight);
 
-    /* ---------- PLACEHOLDER LIGHTER ----------
-       Proportions and detailing approximated from the client's photos:
-       taller-than-wide chassis, brushed metal face engraved with
-       ED 01 / BROKE / No 01 / 250, a knurled diamond-pattern striker
-       at the bottom, a vertical flame-vent column on the right edge,
-       and a hinge line at the top. Still a placeholder — the real
-       glTF will replace all of this in Phase 2 — but reads much
-       closer to the object now. */
+    /* ---------- REFERENCE-MODELLED BLENDER ASSEMBLY ----------
+       Source: design/lighter/ed01-lighter.blend. GLB is in metres;
+       normalize to the scene's existing presentation scale. */
     const lighter = new THREE.Group();
     scene.add(lighter);
-
-    /* Body dimensions — closer to the photo's roughly 1 : 1.55 : 0.45
-       width : height : depth ratio. */
-    const BODY = { w: 1.0, h: 1.55, d: 0.45 };
-    const CAP_H = 0.42;
-
-    function makeMetalMat(cw) {
-      const p = COLOURWAYS[cw];
-      return new THREE.MeshPhysicalMaterial({
-        color: p.color,
-        metalness: p.metalness,
-        roughness: p.roughness,
-        clearcoat: 0.18,
-        clearcoatRoughness: 0.35,
-        // Anisotropy gives the brushed-metal directional sheen.
-        anisotropy: 0.8,
-        anisotropyRotation: 0, // horizontal brushing across the face
+    let hinge = null;
+    let modelReady = false;
+    const finishMaterials = new Set();
+    const engravingMaterials = new Set();
+    const FINISH_COLORS = {
+      brass: new THREE.Color().setRGB(0.52, 0.32, 0.115),
+      onyx: new THREE.Color().setRGB(0.018, 0.020, 0.025),
+      steel: new THREE.Color().setRGB(0.63, 0.65, 0.68),
+    };
+    function applyColourway() {
+      finishMaterials.forEach((mat) => {
+        mat.color.copy(FINISH_COLORS[currentCW]);
+      });
+      engravingMaterials.forEach((mat) => {
+        mat.color.setRGB(...(currentCW === "brass"
+          ? [0.025, 0.017, 0.009] : [0.65, 0.67, 0.69]));
       });
     }
-
-    let bodyMat  = makeMetalMat(currentCW);
-    let capMat   = makeMetalMat(currentCW);
-    let slideMat = new THREE.MeshPhysicalMaterial({
-      color: 0xb6b6b6, metalness: 1.0, roughness: 0.42,
-      clearcoat: 0.1,
+    new GLTFLoader().load("/assets/models/ed01-lighter.glb", (gltf) => {
+      const model = gltf.scene;
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      model.scale.setScalar(1.69 / size.y);
+      hinge = model.getObjectByName("LidPivot");
+      model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        materials.forEach((mat) => {
+          if (mat.name.startsWith("Finish")) finishMaterials.add(mat);
+          if (mat.name === "Engraving") engravingMaterials.add(mat);
+          for (const map of [mat.map, mat.normalMap, mat.roughnessMap]) {
+            if (map) map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+          }
+        });
+      });
+      lighter.add(model);
+      applyColourway();
+      modelReady = true;
+      loadingEl.dataset.done = "1";
+    }, undefined, (error) => {
+      console.error("Unable to load ED 01 model", error);
+      loadingEl.textContent = "The 3D view could not load. Refresh to try again.";
+      loadingEl.setAttribute("role", "status");
+      stage.removeAttribute("aria-hidden");
     });
-    /* Vent column reads a touch darker than the body so it registers as
-       a separate machined component rather than part of the face. */
-    let ventMat = new THREE.MeshPhysicalMaterial({
-      color: 0x1a1a1a, metalness: 1.0, roughness: 0.28,
-    });
 
-    /* Engraved label texture — ED 01 / BROKE / No 01/250.
-       Colour adapts to the colourway: dark text on brass/steel
-       (engraving casts shadow), lighter text on onyx (engraving
-       catches stray light). Rebuilt on every colourway swap. */
-    function drawSpacedText(ctx, text, x, y, spacing) {
-      let cursor = x;
-      for (const ch of text) {
-        ctx.fillText(ch, cursor, y);
-        cursor += ctx.measureText(ch).width + spacing;
-      }
-    }
-    const LABEL_INK = {
-      brass: "rgba(34,22,8,0.92)",
-      onyx:  "rgba(210,210,210,0.78)",
-      steel: "rgba(30,30,30,0.85)",
-    };
-    function makeLabelTexture(cw) {
-      const c = document.createElement("canvas");
-      c.width = 480; c.height = 744; // matches body face aspect
-      const ctx = c.getContext("2d");
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.fillStyle = LABEL_INK[cw] || LABEL_INK.onyx;
-
-      // ED 01 — top-left whisper
-      ctx.font = '500 22px "Figtree", sans-serif';
-      ctx.textAlign = "left";
-      drawSpacedText(ctx, "ED 01", 56, 116, 5);
-
-      // BROKE — centred wordmark, serif
-      ctx.textAlign = "center";
-      ctx.font = '400 72px "Gilda Display", "Cormorant Garamond", serif';
-      ctx.fillText("BROKE", c.width / 2, c.height / 2 + 22);
-
-      // No 01 / 250 — bottom-left whisper
-      ctx.font = '500 22px "Figtree", sans-serif';
-      ctx.textAlign = "left";
-      drawSpacedText(ctx, "No 01/250", 56, c.height - 88, 5);
-
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      return tex;
-    }
-
-    /* Diamond knurl pattern for the striker — built as a normal map so
-       the bumps catch light correctly under the IBL. */
-    function makeKnurlNormalTexture() {
-      const c = document.createElement("canvas");
-      c.width = c.height = 256;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = "rgb(128,128,255)"; // flat normal
-      ctx.fillRect(0, 0, 256, 256);
-
-      const cell = 18; // diamond cell size in px
-      for (let y = 0; y < 256; y += cell) {
-        for (let x = 0; x < 256; x += cell) {
-          const cx = x + cell / 2, cy = y + cell / 2;
-          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * 0.55);
-          grad.addColorStop(0, "rgb(170,170,255)"); // raised
-          grad.addColorStop(1, "rgb(96,96,255)");   // valley
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.moveTo(cx, y);
-          ctx.lineTo(x + cell, cy);
-          ctx.lineTo(cx, y + cell);
-          ctx.lineTo(x, cy);
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(3, 4);
-      return tex;
-    }
-
-    /* ---- Body chassis ---- */
-    const body = new THREE.Mesh(
-      roundedBox(BODY.w, BODY.h, BODY.d, 0.05, 4),
-      bodyMat,
-    );
-    lighter.add(body);
-
-    /* ---- Engraved label decal — child of body so it rotates with it ---- */
-    let labelTex = makeLabelTexture(currentCW);
-    const labelDecal = new THREE.Mesh(
-      new THREE.PlaneGeometry(BODY.w * 0.82, BODY.h * 0.88),
-      new THREE.MeshBasicMaterial({
-        map: labelTex,
-        transparent: true,
-        opacity: 0.95,
-        depthWrite: false,
-      }),
-    );
-    labelDecal.position.set(0, 0, BODY.d / 2 + 0.002);
-    body.add(labelDecal);
-
-    /* ---- Hinge line — thin dark groove where the cap meets the body ---- */
-    const hingeLine = new THREE.Mesh(
-      new THREE.BoxGeometry(BODY.w + 0.005, 0.012, BODY.d + 0.01),
-      new THREE.MeshBasicMaterial({ color: 0x000000 }),
-    );
-    hingeLine.position.set(0, BODY.h / 2, 0);
-    lighter.add(hingeLine);
-
-    /* ---- Hinge group — pivot at top-back edge so cap swings up cleanly ---- */
-    const hinge = new THREE.Group();
-    hinge.position.set(0, BODY.h / 2 + 0.006, -BODY.d / 2);
-    lighter.add(hinge);
-    const cap = new THREE.Mesh(
-      roundedBox(BODY.w, CAP_H, BODY.d, 0.045, 4),
-      capMat,
-    );
-    cap.position.set(0, CAP_H / 2, BODY.d / 2);
-    hinge.add(cap);
-
-    /* ---- Knurled striker — diamond-pattern slider on the lower face ---- */
-    const knurlMap = makeKnurlNormalTexture();
-    slideMat.normalMap = knurlMap;
-    slideMat.normalScale = new THREE.Vector2(0.6, 0.6);
-    const slider = new THREE.Mesh(
-      roundedBox(BODY.w * 0.42, BODY.h * 0.22, 0.04, 0.015, 3),
-      slideMat,
-    );
-    /* Sits between the BROKE wordmark above and the No 01/250
-       engraving below — same composition as the photo. */
-    slider.position.set(0, -BODY.h * 0.16, BODY.d / 2 + 0.024);
-    lighter.add(slider);
-
-    /* ---- Vertical vent column on the right edge of the front face ---- */
-    const ventColumn = new THREE.Mesh(
-      new THREE.BoxGeometry(0.07, BODY.h * 0.86, 0.05),
-      ventMat,
-    );
-    ventColumn.position.set(BODY.w * 0.39, 0, BODY.d / 2 + 0.005);
-    lighter.add(ventColumn);
-
-    /* ---- Flames: a focused jet (blue) + a softer cousin (warm) ---- */
-    const jetFlame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.08, 0.45, 16),
-      new THREE.MeshStandardMaterial({
-        color: 0x6fa8ff, emissive: 0x4a7cd6, emissiveIntensity: 2.0,
-        transparent: true, opacity: 0.0,
-      }),
-    );
-    jetFlame.position.set(BODY.w * 0.39, BODY.h / 2 + CAP_H + 0.05, 0);
-    lighter.add(jetFlame);
-
-    const softFlame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.16, 0.7, 16),
-      new THREE.MeshStandardMaterial({
-        color: 0xffb068, emissive: 0xff7822, emissiveIntensity: 1.8,
-        transparent: true, opacity: 0.0,
-      }),
-    );
-    softFlame.position.set(BODY.w * 0.39, BODY.h / 2 + CAP_H + 0.15, 0);
-    lighter.add(softFlame);
-
-    /* Simple rounded-box helper since BoxGeometry doesn't round.
-       Stand-in until we have the real model. */
-    function roundedBox(w, h, d, r, smoothness) {
-      const shape = new THREE.Shape();
-      const x = -w / 2, y = -h / 2;
-      shape.moveTo(x + r, y);
-      shape.lineTo(x + w - r, y);
-      shape.quadraticCurveTo(x + w, y, x + w, y + r);
-      shape.lineTo(x + w, y + h - r);
-      shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      shape.lineTo(x + r, y + h);
-      shape.quadraticCurveTo(x, y + h, x, y + h - r);
-      shape.lineTo(x, y + r);
-      shape.quadraticCurveTo(x, y, x + r, y);
-      return new THREE.ExtrudeGeometry(shape, {
-        depth: d,
-        bevelEnabled: true,
-        bevelThickness: r * 0.6,
-        bevelSize: r * 0.6,
-        bevelSegments: smoothness,
-        curveSegments: smoothness * 4,
-      }).translate(0, 0, -d / 2);
-    }
-
-    /* ---------- COLOURWAY SWITCHER ---------- */
     document.querySelectorAll(".colourway-pin .chip").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const cw = btn.dataset.cw;
-        if (cw === currentCW) return;
-        currentCW = cw;
+        currentCW = btn.dataset.cw;
         document.querySelectorAll(".colourway-pin .chip").forEach((b) => {
-          b.setAttribute("aria-pressed", b.dataset.cw === cw ? "true" : "false");
+          b.setAttribute("aria-pressed", b.dataset.cw === currentCW ? "true" : "false");
         });
-        const p = COLOURWAYS[cw];
-        for (const m of [bodyMat, capMat]) {
-          m.color.setHex(p.color);
-          m.roughness = p.roughness;
-          m.needsUpdate = true;
-        }
-        // Rebuild the engraving in a contrasting ink for the new finish.
-        const oldTex = labelDecal.material.map;
-        labelTex = makeLabelTexture(cw);
-        labelDecal.material.map = labelTex;
-        labelDecal.material.needsUpdate = true;
-        if (oldTex) oldTex.dispose();
+        applyColourway();
       });
     });
+
+    // Tapered translucent flame envelopes, rooted at the visible burner.
+    function flame(points, color, emissive) {
+      const mesh = new THREE.Mesh(
+        new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), 24),
+        new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 2,
+          transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
+      );
+      mesh.position.set(0.301, 0.567, 0);
+      lighter.add(mesh);
+      return mesh;
+    }
+    const jetFlame = flame([[0,0],[0.018,0.015],[0.025,0.045],[0.014,0.16],[0,0.30]], 0x8abaff, 0x387dff);
+    const softFlame = flame([[0,0],[0.029,0.02],[0.056,0.095],[0.045,0.18],[0.022,0.27],[0,0.40]], 0xffca78, 0xff7818);
 
     /* ---------- SCROLL-DRIVEN KEYFRAMES ---------- */
     /* Scroll progress 0-1 maps to phases:
@@ -654,7 +562,7 @@
       const tC = easeInOut(phaseT(p, PHASES.close));
 
       // Y rotation: full turn during approach, then settle facing-front-ish for open
-      const approachRot = tA * Math.PI * 2;
+      const approachRot = -0.22 + tA * Math.PI * 2;
       // Slight tilt during open / flame phases for a 3/4 read
       const settleRot = lerp(0, Math.PI * 0.08, Math.max(tO, tJ, tS));
       lighter.rotation.y = lerp(approachRot, Math.PI * 2 + settleRot, tO);
@@ -662,22 +570,22 @@
       // X tilt subtly to face camera
       lighter.rotation.x = lerp(0.04, -0.06, Math.max(tO, tJ, tS, tC));
 
-      // Camera dolly
-      camera.position.z = lerp(5.4, 4.2, tA);
-
-      // Open cap: rotate around hinge.x from 0 to -1.1 rad (~63°)
-      const openAmt = (1 - tC) * tO; // open during open phase, reverse during close
-      hinge.rotation.x = -1.1 * openAmt;
-
-      // Slider rises slightly during the open
-      slider.position.y = lerp(-0.05, 0.05, openAmt);
+      // Reference video: lid pivots left, about the depth axis (~102°).
+      const openAmt = (1 - tC) * tO;
+      if (hinge) hinge.rotation.z = 1.78 * openAmt;
+      // Keep the taller open assembly inside the viewport, including narrow screens.
+      lighter.position.y = -0.24 * openAmt;
+      lighter.position.x = 0.08 * openAmt;
+      camera.position.z = Math.max((mobileLayout.matches ? 3.5 : lerp(5.4, 4.7, tA)) + 0.9 * openAmt,
+        1.85 / (2 * Math.tan(THREE.MathUtils.degToRad(17)) * camera.aspect));
 
       // Flames
       // jet visible during jet phase, fades out as soft fades in during switch
-      const jetVisible = tJ * (1 - tS) * (1 - tC);
-      const softVisible = tS * (1 - tC);
+      const jetVisible = modelReady ? tJ * (1 - tS) * (1 - tC) : 0;
+      const softVisible = modelReady ? tS * (1 - tC) : 0;
       jetFlame.material.opacity = jetVisible;
       softFlame.material.opacity = softVisible;
+      lighterAudio.update({ open: openAmt, jet: jetVisible, soft: softVisible, ready: modelReady });
 
       // Flame flicker
       const now = performance.now() * 0.005;
@@ -706,8 +614,51 @@
     const ENTER_DY   = 24;    // px below centre at start
     const EXIT_DY    = -28;   // px above centre at end
 
+    let mobileCaption = null;
+    let mobileCaptionOpacity = 0;
+    let captionTime = performance.now();
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
     function updateSceneVisibility(p) {
+      if (mobileLayout.matches) {
+        const active = p < PHASES.settle[0]
+          ? sceneRanges.findIndex(([lo, hi]) => p >= lo && p < hi) : -1;
+        const now = performance.now();
+        const elapsed = Math.min(now - captionTime, 50);
+        captionTime = now;
+        if (mobileCaption === null) mobileCaption = active;
+        if (reducedMotion.matches) {
+          mobileCaption = active;
+          mobileCaptionOpacity = 1;
+        } else if (active !== mobileCaption) {
+          // Finish fading the outgoing caption before swapping its content.
+          // Fast scrolling selects the latest section, without queuing stale copy.
+          mobileCaptionOpacity = Math.max(0, mobileCaptionOpacity - elapsed / 220);
+          if (mobileCaptionOpacity === 0) mobileCaption = active;
+        } else {
+          mobileCaptionOpacity = Math.min(1, mobileCaptionOpacity + elapsed / 320);
+        }
+        const opacity = mobileCaptionOpacity * mobileCaptionOpacity * (3 - 2 * mobileCaptionOpacity);
+        scenes.forEach((section, i) => {
+          section.hidden = i !== mobileCaption;
+          section.style.opacity = i === mobileCaption ? String(opacity) : '0';
+          section.style.pointerEvents = i === mobileCaption && opacity > 0.5 ? 'auto' : 'none';
+        });
+        ctaEl.hidden = mobileCaption !== -1;
+        ctaEl.style.opacity = mobileCaption === -1 ? String(opacity) : '0';
+        ctaEl.style.pointerEvents = mobileCaption === -1 && opacity > 0.5 ? 'auto' : 'none';
+        ctaEl.dataset.active = mobileCaption === -1 ? '1' : '0';
+        return;
+      }
+      mobileCaption = null;
+      mobileCaptionOpacity = 0;
+      captionTime = performance.now();
+      ctaEl.hidden = false;
+      ctaEl.style.opacity = '';
+      ctaEl.style.pointerEvents = '';
       scenes.forEach((s, i) => {
+        s.hidden = false;
+        s.style.pointerEvents = 'none';
         const [lo, hi] = sceneRanges[i];
         const t = (p - lo) / (hi - lo); // local 0-1 within this scene's phase
 
@@ -734,7 +685,6 @@
     }
 
     /* ---------- RENDER LOOP ---------- */
-    let ready = false;
     function tick() {
       requestAnimationFrame(tick);
       // Smooth between scroll target and rendered progress
@@ -745,13 +695,10 @@
       updateSceneVisibility(renderProgress);
       renderer.render(scene, camera);
 
-      if (!ready) {
-        ready = true;
-        loadingEl.dataset.done = "1";
-      }
     }
 
     window.addEventListener("scroll", updateScrollProgress, { passive: true });
+    window.addEventListener("resize", updateScrollProgress);
     updateScrollProgress();
     updateSceneVisibility(0);
     tick();

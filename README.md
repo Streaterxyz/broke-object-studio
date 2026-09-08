@@ -45,7 +45,24 @@ The repo is also wired for [Claude Code's preview server](https://claude.com/cla
 - Cart ID is persisted in `localStorage` under `broke:cartId`.
 - Checkout redirects to `cart.checkoutUrl` (Shopify-hosted).
 
-## Brand
+## ED 01 lighter model
+
+The scroll experience at `/release/ed-01/` loads `assets/models/ed01-lighter.glb`.
+Editable Blender source, reference assessment, and studio renders are in
+`design/lighter/`. The reconstruction uses the supplied 70 mm height and 10 mm
+thickness; the approximately 41.4 mm width is inferred from the photograph.
+
+Rebuild with Blender 4.5 or later:
+
+```bash
+blender --background --factory-startup --python design/lighter/build_lighter.py
+```
+
+Append `-- --skip-renders` to regenerate only the source and GLB. The GLB includes
+brushed finish textures and a separate `LidPivot` for the scroll-driven opening.
+See `design/lighter/REFERENCE-ASSESSMENT.md` for observed details and assumptions.
+
+## Brand assets
 
 Brand source files (logo masters, the full brand book PDF, etc.) live in a separate folder that's gitignored. The fonts, emblem, palette tokens, and a digest of the guidelines are included here.
 
