@@ -491,7 +491,7 @@
           '#include <project_vertex>\nvSweepPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
         shader.fragmentShader = 'varying vec3 vSweepPosition;\nuniform float sweepCenter;\nuniform float sweepStrength;\nuniform float sweepBrightness;\n' + shader.fragmentShader;
         shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
-          float sweepDistance = (vSweepPosition.x + vSweepPosition.y * 0.10 - sweepCenter) / 0.13;
+          float sweepDistance = (vSweepPosition.x + vSweepPosition.y * 0.10 - sweepCenter) / 0.169;
           float sweepBand = exp(-sweepDistance * sweepDistance);
           float facing = pow(max(normal.z, 0.0), 3.0);
           // A little negative fill gives bright steel enough contrast for the
@@ -756,7 +756,7 @@
       const time = (performance.now() - sweepStarted) / 1000;
       // Constant-speed pass, with its wrap entirely outside the object edges.
       sweepUniforms.center.value = reducedMotion.matches ? -0.2 : -1.0 + 2.0 * ((time % 5) / 5);
-      sweepUniforms.strength.value = introWeight;
+      sweepUniforms.strength.value = introWeight * 0.7;
       sweepUniforms.brightness.value = { onyx: 0.6, brass: 1.0, steel: 1.4 }[currentCW];
       const showCue = modelReady && scrollProgress < 0.012;
       if (scrollCue.dataset.visible !== String(showCue)) scrollCue.dataset.visible = String(showCue);
