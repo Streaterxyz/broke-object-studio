@@ -379,7 +379,6 @@
     import * as THREE from "three";
     import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
     import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-    import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
     import { LighterAudio } from "/assets/lighter-audio.js";
 
     const lighterAudio = new LighterAudio(document.querySelector('[data-sound-toggle]'));
@@ -475,13 +474,36 @@
     rimLight.position.set(2, 1.5, -2);
     scene.add(rimLight);
 
-    // A broad moving studio light catches actual metal normals and bevels.
-    // No object motion or painted shimmer: the reflection follows the geometry.
-    RectAreaLightUniformsLib.init();
-    const sweepLight = new THREE.RectAreaLight(0xffffff, 0, 0.28, 3.2);
-    sweepLight.position.set(-1.8, 0.35, 1.6);
-    sweepLight.lookAt(0, 0, 0);
-    scene.add(sweepLight);
+    // Animate a studio reflection directly in the metal shader. This remains
+    // visible alongside the baked environment, including on near-black finishes.
+    const sweepUniforms = {
+      center: { value: -0.8 },
+      strength: { value: 0 },
+      brightness: { value: 0.85 },
+    };
+    function addMovingReflection(material) {
+      material.onBeforeCompile = (shader) => {
+        shader.uniforms.sweepCenter = sweepUniforms.center;
+        shader.uniforms.sweepStrength = sweepUniforms.strength;
+        shader.uniforms.sweepBrightness = sweepUniforms.brightness;
+        shader.vertexShader = 'varying vec3 vSweepPosition;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>',
+          '#include <project_vertex>\nvSweepPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        shader.fragmentShader = 'varying vec3 vSweepPosition;\nuniform float sweepCenter;\nuniform float sweepStrength;\nuniform float sweepBrightness;\n' + shader.fragmentShader;
+        shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
+          float sweepDistance = (vSweepPosition.x + vSweepPosition.y * 0.10 - sweepCenter) / 0.13;
+          float sweepBand = exp(-sweepDistance * sweepDistance);
+          float facing = pow(max(normal.z, 0.0), 3.0);
+          // A little negative fill gives bright steel enough contrast for the
+          // soft reflection to travel across it without blowing out the face.
+          outgoingLight *= 1.0 - min(0.7, sweepBrightness * 0.5) * sweepStrength * facing;
+          outgoingLight += vec3(sweepBrightness * sweepBand * facing * sweepStrength);
+          #include <opaque_fragment>
+        `);
+      };
+      material.customProgramCacheKey = () => 'ed01-moving-reflection-v1';
+      material.needsUpdate = true;
+    }
 
     /* ---------- REFERENCE-MODELLED BLENDER ASSEMBLY ----------
        Source: design/lighter/ed01-lighter.blend. GLB is in metres;
@@ -516,7 +538,10 @@
         if (!obj.isMesh) return;
         const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
         materials.forEach((mat) => {
-          if (mat.name.startsWith("Finish")) finishMaterials.add(mat);
+          if (mat.name.startsWith("Finish") && !finishMaterials.has(mat)) {
+            finishMaterials.add(mat);
+            addMovingReflection(mat);
+          }
           if (mat.name === "Engraving") engravingMaterials.add(mat);
           for (const map of [mat.map, mat.normalMap, mat.roughnessMap]) {
             if (map) map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -729,12 +754,10 @@
     function updateScrollInvitation() {
       const introWeight = 1 - clamp(renderProgress / 0.04, 0, 1);
       const time = (performance.now() - sweepStarted) / 1000;
-      sweepLight.position.x = reducedMotion.matches ? -0.5 : -1.8 * Math.cos(time * Math.PI / 3);
-      sweepLight.lookAt(0, 0, 0);
-      // Black metal reflects much less light than steel: balance the sweep
-      // per finish so it remains visible without blowing out the brighter metals.
-      const sweepPower = { onyx: 24, brass: 1.8, steel: 1.2 };
-      sweepLight.intensity = sweepPower[currentCW] * introWeight;
+      // Constant-speed pass, with its wrap entirely outside the object edges.
+      sweepUniforms.center.value = reducedMotion.matches ? -0.2 : -1.0 + 2.0 * ((time % 5) / 5);
+      sweepUniforms.strength.value = introWeight;
+      sweepUniforms.brightness.value = { onyx: 0.6, brass: 1.0, steel: 1.4 }[currentCW];
       const showCue = modelReady && scrollProgress < 0.012;
       if (scrollCue.dataset.visible !== String(showCue)) scrollCue.dataset.visible = String(showCue);
       progressFill.style.transform = `scaleY(${renderProgress})`;
