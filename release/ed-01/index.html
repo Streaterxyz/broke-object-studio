@@ -172,7 +172,7 @@
 
     .mobile-menu, .mobile-links, .mobile-edition, .mobile-copy { display: none; }
     @media (max-width: 760px) {
-      :root { --caption-top: 54svh; }
+      :root { --caption-top: calc(100dvh - 260px); }
       .chrome { height: 60px; padding: 8px 20px; background: var(--bg); }
       .chrome .mark { min-height: 44px; }
       .chrome .nav { gap: 16px; }
@@ -189,9 +189,9 @@
       .edition-mark .theme-toggle { right: 20px; left: auto; }
       .sound-toggle { left: 20px; }
       body::after { content: ''; position: fixed; bottom: 0; height: calc(60px + env(safe-area-inset-bottom)); left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--hairline); z-index: 65; }
-      #lighter-stage { top: 116px; bottom: auto; height: calc(var(--caption-top) - 116px); }
+      #lighter-stage { top: 116px; bottom: auto; height: max(80px, calc(var(--caption-top) - 116px)); transition: height .22s ease; }
       #lighter-stage canvas { pointer-events: none; }
-      .scene, .release-cta { position: fixed; top: var(--caption-top); bottom: calc(62px + env(safe-area-inset-bottom)); left: 0; right: 0; padding: 20px; background: var(--bg); border-top: 1px solid var(--hairline); overflow-y: auto; transform: none !important; text-align: left; transition: opacity .18s ease; }
+      .scene, .release-cta { position: fixed; top: auto; bottom: calc(62px + env(safe-area-inset-bottom)); max-height: max(100px, calc(100dvh - 260px)); left: 0; right: 0; padding: 20px; background: var(--bg); border-top: 1px solid var(--hairline); overflow-y: auto; transform: none !important; text-align: left; transition: opacity .18s ease; }
       .scene .full-copy, .scene:first-child .scene-num { display: none; }
       .scene .mobile-copy { display: block; }
       .scene { padding: 16px 20px; }
@@ -575,9 +575,13 @@
       if (hinge) hinge.rotation.z = 1.78 * openAmt;
       // Keep the taller open assembly inside the viewport, including narrow screens.
       lighter.position.y = -0.24 * openAmt;
-      lighter.position.x = 0.08 * openAmt;
-      camera.position.z = Math.max((mobileLayout.matches ? 3.5 : lerp(5.4, 4.7, tA)) + 0.9 * openAmt,
-        1.85 / (2 * Math.tan(THREE.MathUtils.degToRad(17)) * camera.aspect));
+      lighter.position.x = (mobileLayout.matches ? 0.26 : 0.08) * openAmt;
+      const halfFov = Math.tan(THREE.MathUtils.degToRad(17));
+      camera.position.z = mobileLayout.matches
+        ? Math.max(lerp(1.95, 2.7, openAmt) / (2 * halfFov),
+            lerp(1.16, 1.75, openAmt) / (2 * halfFov * camera.aspect)) + 0.16
+        : Math.max(lerp(5.4, 4.7, tA) + 0.9 * openAmt,
+            1.85 / (2 * halfFov * camera.aspect));
 
       // Flames
       // jet visible during jet phase, fades out as soft fades in during switch
@@ -608,6 +612,18 @@
       [PHASES.close[0],    PHASES.settle[0]],// scene 5
     ];
     const ctaEl = document.querySelector(".release-cta");
+    // Captions take their natural content height; the canvas gets all remaining
+    // space. Observation also covers font loading, wrapping and browser resizing.
+    function fitMobileStage() {
+      if (!mobileLayout.matches) return;
+      const caption = [...scenes, ctaEl].find((element) => !element.hidden);
+      if (caption) document.documentElement.style.setProperty('--caption-top',
+        `${caption.getBoundingClientRect().top}px`);
+    }
+    const captionObserver = new ResizeObserver(fitMobileStage);
+    [...scenes, ctaEl].forEach((element) => captionObserver.observe(element));
+    window.addEventListener('resize', fitMobileStage);
+    window.visualViewport?.addEventListener('resize', fitMobileStage);
 
     const ENTER_END  = 0.15;  // fraction of phase: enter ends here
     const LINGER_END = 0.75;  // and linger ends here; exit runs to 1.0
