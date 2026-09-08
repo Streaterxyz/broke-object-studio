@@ -172,7 +172,10 @@
 
     .mobile-menu, .mobile-links, .mobile-edition, .mobile-copy { display: none; }
     @media (max-width: 760px) {
-      :root { --caption-top: 54svh; }
+      /* Transfer 25% of the caption panel to the model. Keep at least
+         220px for copy where space permits; compact phones retain their
+         previous split rather than squeezing the text further. */
+      :root { --caption-top: max(54svh, min(calc(65.5svh - 15.5px - env(safe-area-inset-bottom) * .25), calc(100svh - 282px - env(safe-area-inset-bottom)))); }
       .chrome { height: 60px; padding: 8px 20px; background: var(--bg); }
       .chrome .mark { min-height: 44px; }
       .chrome .nav { gap: 16px; }
@@ -194,7 +197,7 @@
       .scene, .release-cta { position: fixed; top: var(--caption-top); bottom: calc(62px + env(safe-area-inset-bottom)); left: 0; right: 0; padding: 20px; background: var(--bg); border-top: 1px solid var(--hairline); overflow-y: auto; transform: none !important; text-align: left; transition: opacity .18s ease; }
       .scene .full-copy, .scene:first-child .scene-num { display: none; }
       .scene .mobile-copy { display: block; }
-      .scene { padding: 16px 20px 12.8px; }
+      .scene { padding: 16px 20px 9.6px; }
       .scene, .release-cta { transition: none; }
       .scene .scene-inner, .scene[data-side="right"] .scene-inner { max-width: none; margin: 0; text-align: left; }
       .scene .scene-num { font-size: 10px; letter-spacing: .18em; margin-bottom: 10px; color: var(--ink); }
