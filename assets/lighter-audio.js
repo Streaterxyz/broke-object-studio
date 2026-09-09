@@ -38,14 +38,24 @@ export class LighterAudio {
   }
 
   async toggle() {
-    if (this.enabled) { this.mute(); return; }
+    if (this.enabled && this.context?.state === 'running') { this.mute(); return; }
     this.enabled = true;
     this.button.textContent = 'Loading sound';
     this.button.setAttribute('aria-pressed', 'true');
     try {
+      // iOS Web Audio defaults to ambient audio (affected by Silent mode).
+      // Opt into media playback only after the visitor explicitly enables sound.
+      try {
+        if (window.navigator?.audioSession) window.navigator.audioSession.type = 'playback';
+      } catch { /* Older browsers continue with the gesture-unlocked context. */ }
       if (!this.context) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         this.context = new AudioContext();
+        this.context.onstatechange = () => {
+          if (this.enabled && this.loop) {
+            this.button.textContent = this.context.state === 'running' ? 'Sound on' : 'Resume sound';
+          }
+        };
         this.master = this.context.createGain();
         this.master.gain.value = 0;
         this.master.connect(this.context.destination);
@@ -53,8 +63,15 @@ export class LighterAudio {
         this.burnGain.gain.value = 0;
         this.burnGain.connect(this.master);
       }
-      // Resume synchronously from the click, before network/decode awaits.
-      await this.context.resume();
+      // Start a buffer in the trusted tap itself, before any network awaits.
+      // This primes WebKit's output as well as resuming its AudioContext.
+      const resumed = this.context.resume();
+      const unlock = this.context.createBufferSource();
+      unlock.buffer = this.context.createBuffer(1, 1, 22050);
+      unlock.connect(this.context.destination);
+      unlock.onended = () => unlock.disconnect();
+      unlock.start(0);
+      await resumed;
       if (!this.loading) {
         this.loading = Promise.all(['open', 'ignite', 'burn', 'close'].map(async (name) => {
           const response = await fetch(`/assets/audio/ed01/${name}.wav`);
@@ -74,7 +91,7 @@ export class LighterAudio {
         this.loop.start();
       }
       this.master.gain.setTargetAtTime(0.7, this.context.currentTime, 0.025);
-      this.button.textContent = 'Sound on';
+      this.button.textContent = this.context.state === 'running' ? 'Sound on' : 'Resume sound';
     } catch (error) {
       this.mute();
       this.button.textContent = 'Retry sound';

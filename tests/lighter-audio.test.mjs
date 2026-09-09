@@ -37,8 +37,9 @@ test('audio needs opt-in, loops while enabled, and stops on mute', async () => {
   const sources = [];
   class Context {
     currentTime = 0; state = 'running'; destination = {};
-    async resume() {}
+    async resume() { this.state = 'running'; }
     async decodeAudioData() { return {}; }
+    createBuffer() { return { unlock: true }; }
     createGain() { return { gain: { value: 0, setTargetAtTime() {}, cancelScheduledValues() {} }, connect() {} }; }
     createBufferSource() {
       const s = { connect() {}, disconnect() {}, start() { this.started = true; }, stop() { this.stopped = true; } };
@@ -46,7 +47,7 @@ test('audio needs opt-in, loops while enabled, and stops on mute', async () => {
     }
   }
   const previous = { window: globalThis.window, document: globalThis.document, fetch: globalThis.fetch };
-  globalThis.window = { AudioContext: Context, addEventListener() {} };
+  globalThis.window = { AudioContext: Context, navigator: { audioSession: { type: 'auto' } }, addEventListener() {} };
   globalThis.document = { hidden: false, addEventListener() {} };
   globalThis.fetch = async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(0) });
   try {
@@ -56,12 +57,20 @@ test('audio needs opt-in, loops while enabled, and stops on mute', async () => {
     assert.equal(sources.length, 0);
     await audio.toggle();
     audio.update(pose(1, 1));
-    assert.equal(sources.length, 1, 'enabling midway starts only the burn bed');
-    assert.equal(sources[0].loop, true);
+    assert.equal(window.navigator.audioSession.type, 'playback');
+    assert.equal(sources[0].buffer.unlock, true, 'output is unlocked from the tap');
+    assert.equal(sources.filter(s => !s.buffer.unlock).length, 1, 'enabling midway starts only the burn bed');
+    assert.equal(sources[1].loop, true);
+    audio.context.state = 'interrupted';
+    audio.context.onstatechange();
+    assert.equal(button.textContent, 'Resume sound');
+    await audio.toggle();
+    assert.equal(button.textContent, 'Sound on');
+    assert.equal(sources.filter(s => s.loop).length, 1, 'resuming does not duplicate the loop');
     audio.update(pose(0));
-    assert.equal(sources.length, 2, 'closing plays one shot');
+    assert.equal(sources.filter(s => !s.buffer.unlock).length, 2, 'closing plays one shot');
     audio.mute();
-    assert.ok(sources.every(s => s.stopped));
+    assert.ok(sources.filter(s => !s.buffer.unlock).every(s => s.stopped));
     assert.equal(button.textContent, 'Sound off');
   } finally {
     Object.assign(globalThis, previous);
